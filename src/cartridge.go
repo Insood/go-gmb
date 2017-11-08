@@ -13,8 +13,21 @@ type Cartridge struct {
 	memory []uint8
 }
 
-func (cart *Cartridge) read(address uint16) uint8 {
+// Returns an 8-bit value at the given address
+func (cart *Cartridge) read8(address uint16) uint8 {
 	return (cart.memory)[address]
+}
+
+// Returns a 16-bit value starting from the given address
+// The value returned is formed by: <*address> | <*address+1> << 8
+func (cart *Cartridge) read16(address uint16) uint16 {
+	return uint16((cart.memory)[address]) | (uint16((cart.memory)[address+1]) << 8)
+}
+
+// Writes an 8-bit value to the 16-bit address provided.
+// TODO: Check to make sure that data is being written to RAM and not ROM
+func (cart *Cartridge) write8(address uint16, data uint8) {
+	cart.memory[address] = data
 }
 
 // loadROM - Reads in the ROM stored in the romname file
@@ -38,6 +51,9 @@ func loadCart(romName string) *Cartridge {
 			break
 		}
 	}
+
+	emptyMemory := make([]uint8, cap(memory)-len(memory)) // Make sure that we have a full 64KB of memory
+	memory = append(memory, emptyMemory...)
 
 	cart := new(Cartridge)
 	cart.memory = memory

@@ -11,7 +11,7 @@ var DEBUGMODE = true
 
 func debugPrintHeader(cpu *CPU) {
 	if cpu.instructionsExecuted%20 == 0 {
-		fmt.Printf("ADDR : instruction\t\t\tB  C  D  E  H  L  A  PW SZ-X-P-C SP\n")
+		fmt.Printf("ADDR : instruction\t\t\tB  C  D  E  H  L  A  PW ZNHC---- SP\n")
 	}
 }
 
@@ -25,7 +25,7 @@ func debugPrintLn(str string) {
 // debugPrint - will output a single line to the console regarding the current instruction
 // Format:
 // INST : PC <values> <instruction name> RB RC RD RE RH RL RA PSW SP
-func debugPrint(cpu *CPU, name string, values uint16) {
+func debugPrint(cpu *CPU, name string, values int) {
 	if !DEBUGMODE {
 		return
 	}
@@ -34,9 +34,16 @@ func debugPrint(cpu *CPU, name string, values uint16) {
 
 	output := ""
 
-	output += fmt.Sprintf("%04X : %02X", cpu.programCounter, cpu.currentInstruction())
-	for i := uint16(1); i < values+1; i++ {
-		output += fmt.Sprintf(" %02X", cpu.cart.read(cpu.programCounter+i))
+	// Hard-wire an 0xCB before printing extended mode instructions
+	// because
+	if cpu.cart.memory[cpu.programCounter-1] != 0xCB {
+		output += fmt.Sprintf("%04X : %02X", cpu.programCounter, cpu.currentInstruction())
+	} else {
+		output += fmt.Sprintf("%04X : CB %02X", cpu.programCounter-1, cpu.currentInstruction())
+	}
+
+	for i := 1; i < values; i++ {
+		output += fmt.Sprintf(" %02X", cpu.cart.read8(cpu.programCounter+uint16(i)))
 	}
 	output += fmt.Sprintf("\t\t %-15s", name)
 
@@ -56,7 +63,7 @@ func main() {
 	romName := args[len(args)-1]
 
 	// Parse command line flags
-	verboseFlag := flag.Bool("v", false, "Show every instruction being executed (slow)")
+	verboseFlag := flag.Bool("v", true, "Show every instruction being executed (slow)")
 	flag.Parse()
 
 	DEBUGMODE = *verboseFlag

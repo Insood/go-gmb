@@ -1,8 +1,15 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
+
+// Instruction - a struct which encapsulates a function pointer and also some information
+// about the CPU instruction
+type Instruction struct {
+	name     string
+	dataSize int
+	function func(cpu *CPU)
+	cycles   int
+}
 
 // CPU - Represents the LR35902 CPU
 type CPU struct {
@@ -10,6 +17,8 @@ type CPU struct {
 	rarray                     []*uint8
 	programCounter             uint16
 	stackPointer               uint16
+	mainInstructions           [256]Instruction
+	extendedInstructions       [256]Instruction
 
 	cart *Cartridge
 
@@ -21,8 +30,8 @@ type CPU struct {
 
 	// The following are not part of the microcontroller spec, but are here to help
 	// with the emulation
-	instructionsExecuted int64
-	cpuCycles            int64
+	instructionsExecuted uint64
+	cpuCycles            uint64
 }
 
 func pswByte(mc *CPU) uint8 {
@@ -45,28 +54,216 @@ func pswByte(mc *CPU) uint8 {
 	return data
 }
 
+func (cpu *CPU) initializeMainInstructionSet() {
+	cpu.mainInstructions[0x00] = Instruction{"NOP", 1, nop, 4}
+
+	cpu.mainInstructions[0x20] = Instruction{"JR NZ,r8", 2, jrcc, 12}
+	cpu.mainInstructions[0x30] = Instruction{"JR NC,r8", 2, jrcc, 12}
+	cpu.mainInstructions[0x28] = Instruction{"JR Z,r8", 2, jrcc, 12}
+	cpu.mainInstructions[0x38] = Instruction{"JR C,r8", 2, jrcc, 12}
+
+	cpu.mainInstructions[0x01] = Instruction{"LD BC, d16", 3, ld16, 12}
+	cpu.mainInstructions[0x11] = Instruction{"LD DE, d16", 3, ld16, 12}
+	cpu.mainInstructions[0x21] = Instruction{"LD HL, d16", 3, ld16, 12}
+	cpu.mainInstructions[0x31] = Instruction{"LD SP, d16", 3, ld16, 12}
+	cpu.mainInstructions[0x32] = Instruction{"LD (HL-), A", 1, lddHL, 8}
+
+	cpu.mainInstructions[0xA8] = Instruction{"XOR B", 1, xor, 4}
+	cpu.mainInstructions[0xA9] = Instruction{"XOR C", 1, xor, 4}
+	cpu.mainInstructions[0xAA] = Instruction{"XOR D", 1, xor, 4}
+	cpu.mainInstructions[0xAB] = Instruction{"XOR E", 1, xor, 4}
+	cpu.mainInstructions[0xAC] = Instruction{"XOR H", 1, xor, 4}
+	cpu.mainInstructions[0xAD] = Instruction{"XOR L", 1, xor, 4}
+	cpu.mainInstructions[0xAE] = Instruction{"XOR HL", 1, xor, 4}
+	cpu.mainInstructions[0xAF] = Instruction{"XOR A", 1, xor, 4}
+
+}
+
+func (cpu *CPU) initializeExtendedInstructionSet() {
+	// Target register: lowest 3 bits
+
+	// BIT instructions (4x, 5x, 6x, 7x)
+	registerNames := [8]string{"B", "C", "D", "E", "H", "L", "(HL)", "A"}
+
+	for i := 0x40; i < 0x80; i++ {
+		whichBit := (i >> 3) & 0x7
+		registerName := registerNames[i&0x7]
+
+		instructionName := fmt.Sprintf("BIT %d %s", whichBit, registerName)
+		if i&0x7 != 6 {
+			cpu.extendedInstructions[i] = Instruction{instructionName, 1, bit, 8}
+		} else { // Instructions which access (HL) consume twice as many cycles
+			cpu.extendedInstructions[i] = Instruction{instructionName, 1, bit, 16}
+		}
+	}
+
+	// RES instructions (8x, 9x, Ax, Bx)
+	// <10XX>
+
+	// SET instructions (Cx, Dx, Ex, Fx)
+	// <11XX>
+
+}
+
 func newCPU() *CPU {
-	mc := new(CPU)
+	cpu := new(CPU)
 	// the 7th element is nil because some instructions have a memory reference
 	// bit pattern which corresponds to 110B
-	mc.rarray = []*uint8{&mc.rb, &mc.rc, &mc.rd, &mc.re, &mc.rh, &mc.rl, nil, &mc.ra}
-	return mc
+	cpu.rarray = []*uint8{&cpu.rb, &cpu.rc, &cpu.rd, &cpu.re, &cpu.rh, &cpu.rl, nil, &cpu.ra}
+
+	for i := 0; i <= 255; i++ {
+		cpu.mainInstructions[i] = Instruction{"Unimplemented", 0, unimplemented, 0}
+		cpu.extendedInstructions[i] = Instruction{"Unimplemented", 0, unimplemented, 0}
+	}
+
+	cpu.initializeMainInstructionSet()
+	cpu.initializeExtendedInstructionSet()
+
+	return cpu
+}
+
+func (cpu *CPU) getBC() uint16 {
+	return uint16(cpu.rb)<<8 | uint16(cpu.rc)
+}
+func (cpu *CPU) getDE() uint16 {
+	return uint16(cpu.rd)<<8 | uint16(cpu.re)
+}
+func (cpu *CPU) getHL() uint16 {
+	return uint16(cpu.rh)<<8 | uint16(cpu.rl)
+}
+
+func (cpu *CPU) setBC(data uint16) {
+	cpu.rb = uint8(data >> 8)
+	cpu.rc = uint8(data & 0xFF)
+}
+func (cpu *CPU) setDE(data uint16) {
+	cpu.rd = uint8(data >> 8)
+	cpu.re = uint8(data & 0xFF)
+}
+func (cpu *CPU) setHL(data uint16) {
+	cpu.rh = uint8(data >> 8)
+	cpu.rl = uint8(data & 0xFF)
+}
+
+// SetRegisterPair - sets the value of a register pair to the given value
+// The register pair is determined based on the current instruction
+// where bits 4/5 encode which register pair gets the data
+func (cpu *CPU) SetRegisterPair(data uint16) {
+	pair := (cpu.currentInstruction() >> 4) & 0x3 // 00XX0000
+	switch pair {
+	case 0x0:
+		cpu.setBC(data) // Registers B,C
+	case 0x1:
+		cpu.setDE(data) // Registers D, E
+	case 0x2:
+		cpu.setHL(data) // Registers H, L
+	case 0x3:
+		cpu.stackPointer = data
+	}
+}
+
+// GetMemoryReference - gets the value from the memory specified by registers H & L
+func (cpu *CPU) GetMemoryReference() uint8 {
+	address := uint16(cpu.rh)<<8 | uint16(cpu.rl)
+	return cpu.cart.read8(address)
+}
+
+// GetRegisterValue - gets the value of the register encoded in the current
+// CPU instruction. These are the 3 lowest bits
+func (cpu *CPU) GetRegisterValue() uint8 {
+	register := cpu.currentInstruction() & 0x7 // 00000XXX
+	if register == 6 {
+		return cpu.GetMemoryReference()
+	}
+	return *cpu.rarray[register]
+}
+
+// CheckCondition - checks the condition of the flag encoded in
+// bits 3&4 of the CPU instruction and then returns true whether or not
+// that condition is met
+func (cpu *CPU) CheckCondition() bool {
+	condition := (cpu.currentInstruction() >> 3) & 0x3
+	var result bool
+	switch condition {
+	case 0x0:
+		result = !cpu.zero // NZ
+	case 0x1:
+		result = cpu.zero // Z
+	case 0x2:
+		result = !cpu.carry // NC
+	case 0x3:
+		result = cpu.carry // C
+	}
+	return result
 }
 
 func (cpu *CPU) currentInstruction() uint8 {
-	return cpu.cart.read(cpu.programCounter)
+	return cpu.cart.read8(cpu.programCounter)
+}
+func (cpu *CPU) immediate8() uint8 {
+	return cpu.cart.read8(cpu.programCounter + 1)
 }
 
-func (cpu *CPU) immediate1() uint8 {
-	return cpu.cart.read(cpu.programCounter + 1)
+// Sets the Zero bit if bit "b" of the specified register is 0
+func bit(cpu *CPU) {
+	testRegisterValue := cpu.GetRegisterValue()
+	testBit := (cpu.currentInstruction() >> 3) & 0x7
+
+	cpu.zero = (testRegisterValue>>testBit)&0x1 == 0
+	cpu.subtract = false
+	cpu.halfCarry = true
+	// cpu.carry is not affected by this instruction
+
+	cpu.programCounter++
 }
 
-func (cpu *CPU) immediate2() uint8 {
-	return cpu.cart.read(cpu.programCounter + 2)
+// jrcc - if the specified condition is true, then add the immediate byte
+// to the current program counter and then jump to it
+// NOTE: The immediate byte is a SIGNED value meaning that jumps from
+// -126 to +129 are possible
+func jrcc(cpu *CPU) {
+	if cpu.CheckCondition() {
+		// The jump address is relative to the end of the 2-byte opcode
+		cpu.programCounter = cpu.programCounter + 2 + uint16(int8(cpu.immediate8()))
+	} else {
+		cpu.programCounter += 2
+	}
 }
 
-func (cpu *CPU) ld16() {
-	debugPrint(cpu, "LD")
+// Loads 16-bit immediate data into register pairs
+func ld16(cpu *CPU) {
+	data16 := cpu.cart.read16(cpu.programCounter + 1)
+	cpu.SetRegisterPair(data16)
+	cpu.programCounter += 3
+}
+
+// Loads A into the memory address HL, then decrements HL by 1
+func lddHL(cpu *CPU) {
+	address := cpu.getHL()
+	cpu.cart.write8(address, cpu.ra)
+	address--
+	cpu.setHL(address)
+	cpu.programCounter++
+}
+
+// nop - do nothing
+func nop(cpu *CPU) {
+	cpu.programCounter++
+}
+
+// xor - Exclusive OR with the accumulator
+func xor(cpu *CPU) {
+	value := cpu.GetRegisterValue()
+	cpu.ra = cpu.ra ^ value
+	cpu.zero = (cpu.ra == 0)
+	cpu.halfCarry = false
+	cpu.subtract = false
+	cpu.carry = false
+	cpu.programCounter++
+}
+
+func unimplemented(cpu *CPU) {
+	panic("This instruction is not implemented")
 }
 
 /*
@@ -1253,13 +1450,19 @@ func (mc *microcontroller) run() {
 
 func (cpu *CPU) step() {
 	instruction := cpu.currentInstruction()
-	switch {
-	case instruction == 0xCE:
-
-	default:
-		err := fmt.Sprintf("[%d] Unknown instruction: %X ", cpu.programCounter, instruction)
-		fmt.Println(err)
-		panic(err)
+	instructionInfo := Instruction{}
+	if instruction != 0xCB {
+		instructionInfo = cpu.mainInstructions[instruction]
+	} else {
+		cpu.programCounter++
+		instruction := cpu.currentInstruction()
+		instructionInfo = cpu.extendedInstructions[instruction]
 	}
+
+	// The values affected by this instructrion will be shown before the next instruction is
+	// executed, but before the debugPrint output is shown
+	debugPrint(cpu, instructionInfo.name, instructionInfo.dataSize)
+	instructionInfo.function(cpu)
 	cpu.instructionsExecuted++
+	cpu.cpuCycles += uint64(instructionInfo.cycles)
 }
