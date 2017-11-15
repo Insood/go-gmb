@@ -34,20 +34,18 @@ type CPU struct {
 	cpuCycles            uint64
 }
 
-func pswByte(mc *CPU) uint8 {
+func (cpu *CPU) pswByte() uint8 {
 	var data uint8 = 0x0
-	if mc.zero {
+	if cpu.zero {
 		data |= (0x1 << 7)
 	}
-
-	if mc.subtract {
+	if cpu.subtract {
 		data |= (0x1 << 6)
 	}
-
-	if mc.halfCarry {
+	if cpu.halfCarry {
 		data |= (0x1 << 5)
 	}
-	if mc.carry {
+	if cpu.carry {
 		data |= (0x1 << 4)
 	}
 
@@ -55,8 +53,21 @@ func pswByte(mc *CPU) uint8 {
 }
 
 func (cpu *CPU) initializeMainInstructionSet() {
-	cpu.mainInstructions[0x00] = Instruction{"NOP", 1, nop, 4}
+	cpu.mainInstructions[0xCD] = Instruction{"CALL", 3, call, 24}
 
+	cpu.mainInstructions[0xF3] = Instruction{"DI", 1, di, 4}
+
+	cpu.mainInstructions[0x3C] = Instruction{"INC A", 1, inc, 4}
+	cpu.mainInstructions[0x04] = Instruction{"INC B", 1, inc, 4}
+	cpu.mainInstructions[0x0C] = Instruction{"INC C", 1, inc, 4}
+	cpu.mainInstructions[0x14] = Instruction{"INC D", 1, inc, 4}
+	cpu.mainInstructions[0x1C] = Instruction{"INC E", 1, inc, 4}
+	cpu.mainInstructions[0x24] = Instruction{"INC H", 1, inc, 4}
+	cpu.mainInstructions[0x2C] = Instruction{"INC L", 1, inc, 4}
+	cpu.mainInstructions[0x34] = Instruction{"INC (HL)", 1, inc, 12}
+
+	cpu.mainInstructions[0xC3] = Instruction{"JP nn", 3, jpnn, 12}
+	cpu.mainInstructions[0x18] = Instruction{"JR", 2, jr, 8}
 	cpu.mainInstructions[0x20] = Instruction{"JR NZ,r8", 2, jrcc, 12}
 	cpu.mainInstructions[0x30] = Instruction{"JR NC,r8", 2, jrcc, 12}
 	cpu.mainInstructions[0x28] = Instruction{"JR Z,r8", 2, jrcc, 12}
@@ -66,7 +77,107 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x11] = Instruction{"LD DE, d16", 3, ld16, 12}
 	cpu.mainInstructions[0x21] = Instruction{"LD HL, d16", 3, ld16, 12}
 	cpu.mainInstructions[0x31] = Instruction{"LD SP, d16", 3, ld16, 12}
-	cpu.mainInstructions[0x32] = Instruction{"LD (HL-), A", 1, lddHL, 8}
+	cpu.mainInstructions[0x32] = Instruction{"LD (HL-), A", 1, lddHLA, 8}
+
+	cpu.mainInstructions[0x70] = Instruction{"LD (HL) B", 1, ldHLr, 8}
+	cpu.mainInstructions[0x71] = Instruction{"LD (HL) C", 1, ldHLr, 8}
+	cpu.mainInstructions[0x72] = Instruction{"LD (HL) D", 1, ldHLr, 8}
+	cpu.mainInstructions[0x73] = Instruction{"LD (HL) E", 1, ldHLr, 8}
+	cpu.mainInstructions[0x74] = Instruction{"LD (HL) H", 1, ldHLr, 8}
+	cpu.mainInstructions[0x75] = Instruction{"LD (HL) L", 1, ldHLr, 8}
+	// 0x76 is HALT. There is no LD (HL) (HL)
+	cpu.mainInstructions[0x77] = Instruction{"LD (HL) A", 1, ldHLr, 8}
+
+	cpu.mainInstructions[0x06] = Instruction{"LD B, d8", 2, ldrn, 8}
+	cpu.mainInstructions[0x0E] = Instruction{"LD C, d8", 2, ldrn, 8}
+	cpu.mainInstructions[0x16] = Instruction{"LD D, d8", 2, ldrn, 8}
+	cpu.mainInstructions[0x1E] = Instruction{"LD E, d8", 2, ldrn, 8}
+	cpu.mainInstructions[0x26] = Instruction{"LD H, d8", 2, ldrn, 8}
+	cpu.mainInstructions[0x2E] = Instruction{"LD L, d8", 2, ldrn, 8}
+	cpu.mainInstructions[0x36] = Instruction{"LD (HL), d8", 2, ldrn, 12}
+	cpu.mainInstructions[0x3E] = Instruction{"LD A, d8", 2, ldrn, 8}
+
+	cpu.mainInstructions[0x40] = Instruction{"LD B, B", 1, ldrr, 4}
+	cpu.mainInstructions[0x41] = Instruction{"LD B, C", 1, ldrr, 4}
+	cpu.mainInstructions[0x42] = Instruction{"LD B, D", 1, ldrr, 4}
+	cpu.mainInstructions[0x43] = Instruction{"LD B, E", 1, ldrr, 4}
+	cpu.mainInstructions[0x44] = Instruction{"LD B, H", 1, ldrr, 4}
+	cpu.mainInstructions[0x45] = Instruction{"LD B, L", 1, ldrr, 4}
+	cpu.mainInstructions[0x46] = Instruction{"LD B, (HL)", 1, ldrr, 8}
+	cpu.mainInstructions[0x47] = Instruction{"LD B, A", 1, ldrr, 4}
+
+	cpu.mainInstructions[0x48] = Instruction{"LD C, B", 1, ldrr, 4}
+	cpu.mainInstructions[0x49] = Instruction{"LD C, C", 1, ldrr, 4}
+	cpu.mainInstructions[0x4A] = Instruction{"LD C, D", 1, ldrr, 4}
+	cpu.mainInstructions[0x4B] = Instruction{"LD C, E", 1, ldrr, 4}
+	cpu.mainInstructions[0x4C] = Instruction{"LD C, H", 1, ldrr, 4}
+	cpu.mainInstructions[0x4D] = Instruction{"LD C, L", 1, ldrr, 4}
+	cpu.mainInstructions[0x4E] = Instruction{"LD C, (HL)", 1, ldrr, 8}
+	cpu.mainInstructions[0x4F] = Instruction{"LD C, A", 1, ldrr, 4}
+
+	cpu.mainInstructions[0x50] = Instruction{"LD D, B", 1, ldrr, 4}
+	cpu.mainInstructions[0x51] = Instruction{"LD D, C", 1, ldrr, 4}
+	cpu.mainInstructions[0x52] = Instruction{"LD D, D", 1, ldrr, 4}
+	cpu.mainInstructions[0x53] = Instruction{"LD D, E", 1, ldrr, 4}
+	cpu.mainInstructions[0x54] = Instruction{"LD D, H", 1, ldrr, 4}
+	cpu.mainInstructions[0x55] = Instruction{"LD D, L", 1, ldrr, 4}
+	cpu.mainInstructions[0x56] = Instruction{"LD D, (HL)", 1, ldrr, 8}
+	cpu.mainInstructions[0x57] = Instruction{"LD D, A", 1, ldrr, 4}
+
+	cpu.mainInstructions[0x58] = Instruction{"LD E, B", 1, ldrr, 4}
+	cpu.mainInstructions[0x59] = Instruction{"LD E, C", 1, ldrr, 4}
+	cpu.mainInstructions[0x5A] = Instruction{"LD E, D", 1, ldrr, 4}
+	cpu.mainInstructions[0x5B] = Instruction{"LD E, E", 1, ldrr, 4}
+	cpu.mainInstructions[0x5C] = Instruction{"LD E, H", 1, ldrr, 4}
+	cpu.mainInstructions[0x5D] = Instruction{"LD E, L", 1, ldrr, 4}
+	cpu.mainInstructions[0x5E] = Instruction{"LD E, (HL)", 1, ldrr, 8}
+	cpu.mainInstructions[0x5F] = Instruction{"LD E, A", 1, ldrr, 4}
+
+	cpu.mainInstructions[0x60] = Instruction{"LD H, B", 1, ldrr, 4}
+	cpu.mainInstructions[0x61] = Instruction{"LD H, C", 1, ldrr, 4}
+	cpu.mainInstructions[0x62] = Instruction{"LD H, D", 1, ldrr, 4}
+	cpu.mainInstructions[0x63] = Instruction{"LD H, E", 1, ldrr, 4}
+	cpu.mainInstructions[0x64] = Instruction{"LD H, H", 1, ldrr, 4}
+	cpu.mainInstructions[0x65] = Instruction{"LD H, L", 1, ldrr, 4}
+	cpu.mainInstructions[0x66] = Instruction{"LD H, (HL)", 1, ldrr, 8}
+	cpu.mainInstructions[0x67] = Instruction{"LD H, A", 1, ldrr, 4}
+
+	cpu.mainInstructions[0x68] = Instruction{"LD L, B", 1, ldrr, 4}
+	cpu.mainInstructions[0x69] = Instruction{"LD L, C", 1, ldrr, 4}
+	cpu.mainInstructions[0x6A] = Instruction{"LD L, D", 1, ldrr, 4}
+	cpu.mainInstructions[0x6B] = Instruction{"LD L, E", 1, ldrr, 4}
+	cpu.mainInstructions[0x6C] = Instruction{"LD L, H", 1, ldrr, 4}
+	cpu.mainInstructions[0x6D] = Instruction{"LD L, L", 1, ldrr, 4}
+	cpu.mainInstructions[0x6E] = Instruction{"LD L, (HL)", 1, ldrr, 8}
+	cpu.mainInstructions[0x6F] = Instruction{"LD L, A", 1, ldrr, 4}
+
+	cpu.mainInstructions[0x78] = Instruction{"LD A, B", 1, ldrr, 4}
+	cpu.mainInstructions[0x79] = Instruction{"LD A, C", 1, ldrr, 4}
+	cpu.mainInstructions[0x7A] = Instruction{"LD A, D", 1, ldrr, 4}
+	cpu.mainInstructions[0x7B] = Instruction{"LD A, E", 1, ldrr, 4}
+	cpu.mainInstructions[0x7C] = Instruction{"LD A, H", 1, ldrr, 4}
+	cpu.mainInstructions[0x7D] = Instruction{"LD A, L", 1, ldrr, 4}
+	cpu.mainInstructions[0x7E] = Instruction{"LD A, (HL)", 1, ldrr, 8}
+	cpu.mainInstructions[0x7F] = Instruction{"LD A, A", 1, ldrr, 4}
+
+	cpu.mainInstructions[0xE2] = Instruction{"LD (C), A", 1, ldCA, 8}
+
+	cpu.mainInstructions[0xE0] = Instruction{"LDH (n),A", 2, ldhna, 12}
+	cpu.mainInstructions[0xEA] = Instruction{"LD (nn), A", 3, ldnna, 16}
+
+	cpu.mainInstructions[0x00] = Instruction{"NOP", 1, nop, 4}
+
+	cpu.mainInstructions[0xC1] = Instruction{"POP BC", 1, pop, 12}
+	cpu.mainInstructions[0xD1] = Instruction{"POP DE", 1, pop, 12}
+	cpu.mainInstructions[0xE1] = Instruction{"POP HL", 1, pop, 12}
+	cpu.mainInstructions[0xF1] = Instruction{"POP AF", 1, pop, 12}
+
+	cpu.mainInstructions[0xC5] = Instruction{"PUSH BC", 1, push, 16}
+	cpu.mainInstructions[0xD5] = Instruction{"PUSH DE", 1, push, 16}
+	cpu.mainInstructions[0xE5] = Instruction{"PUSH HL", 1, push, 16}
+	cpu.mainInstructions[0xF5] = Instruction{"PUSH AF", 1, push, 16}
+
+	cpu.mainInstructions[0xC9] = Instruction{"RET", 1, ret, 16}
 
 	cpu.mainInstructions[0xA8] = Instruction{"XOR B", 1, xor, 4}
 	cpu.mainInstructions[0xA9] = Instruction{"XOR C", 1, xor, 4}
@@ -119,6 +230,7 @@ func newCPU() *CPU {
 	cpu.initializeMainInstructionSet()
 	cpu.initializeExtendedInstructionSet()
 
+	cpu.programCounter = 0x100 // Assuming there's no boot room being executed
 	return cpu
 }
 
@@ -130,6 +242,9 @@ func (cpu *CPU) getDE() uint16 {
 }
 func (cpu *CPU) getHL() uint16 {
 	return uint16(cpu.rh)<<8 | uint16(cpu.rl)
+}
+func (cpu *CPU) getAF() uint16 {
+	return uint16(cpu.ra)<<8 | uint16(cpu.pswByte())
 }
 
 func (cpu *CPU) setBC(data uint16) {
@@ -143,6 +258,34 @@ func (cpu *CPU) setDE(data uint16) {
 func (cpu *CPU) setHL(data uint16) {
 	cpu.rh = uint8(data >> 8)
 	cpu.rl = uint8(data & 0xFF)
+}
+
+// SetRegister - sets the value of a register to the given value
+// The register is computed by using the current instruction where
+// bits 3,4,5 encode which register pair gets the data
+func (cpu *CPU) SetRegister(data uint8) {
+	register := (cpu.currentInstruction() >> 3) & 0x7 // 00XXX110
+	if register == 0x6 {                              // (HL)
+		cpu.SetMemoryReference(data)
+	} else {
+		*cpu.rarray[register] = data
+	}
+}
+
+// GetRegisterPair - gets the value of the register pair encoded in the instruction
+func (cpu *CPU) GetRegisterPair() uint16 {
+	pair := (cpu.currentInstruction() >> 4) & 0x3 // 00XX0000
+	switch pair {
+	case 0x0:
+		return cpu.getBC()
+	case 0x1:
+		return cpu.getDE()
+	case 0x2:
+		return cpu.getHL()
+	case 0x3:
+		return cpu.getAF()
+	}
+	return 0
 }
 
 // SetRegisterPair - sets the value of a register pair to the given value
@@ -168,10 +311,15 @@ func (cpu *CPU) GetMemoryReference() uint8 {
 	return cpu.cart.read8(address)
 }
 
-// GetRegisterValue - gets the value of the register encoded in the current
-// CPU instruction. These are the 3 lowest bits
-func (cpu *CPU) GetRegisterValue() uint8 {
-	register := cpu.currentInstruction() & 0x7 // 00000XXX
+// SetMemoryReference - sets the address stored in (HL) to the given value
+func (cpu *CPU) SetMemoryReference(data uint8) {
+	address := uint16(cpu.rh)<<8 | uint16(cpu.rl)
+	cpu.cart.write8(address, data)
+}
+
+// GetRegisterValue - gets the value encoded in the specified register
+// Register 6 is the special (HL) register
+func (cpu *CPU) GetRegisterValue(register uint8) uint8 {
 	if register == 6 {
 		return cpu.GetMemoryReference()
 	}
@@ -203,10 +351,14 @@ func (cpu *CPU) currentInstruction() uint8 {
 func (cpu *CPU) immediate8() uint8 {
 	return cpu.cart.read8(cpu.programCounter + 1)
 }
+func (cpu *CPU) immediate16() uint16 {
+	return cpu.cart.read16(cpu.programCounter + 1)
+}
 
 // Sets the Zero bit if bit "b" of the specified register is 0
 func bit(cpu *CPU) {
-	testRegisterValue := cpu.GetRegisterValue()
+	register := cpu.currentInstruction() & 0x7
+	testRegisterValue := cpu.GetRegisterValue(register)
 	testBit := (cpu.currentInstruction() >> 3) & 0x7
 
 	cpu.zero = (testRegisterValue>>testBit)&0x1 == 0
@@ -215,6 +367,38 @@ func bit(cpu *CPU) {
 	// cpu.carry is not affected by this instruction
 
 	cpu.programCounter++
+}
+
+func call(cpu *CPU) {
+	target := cpu.immediate16()
+	next := cpu.programCounter + 3                        // The instruction after the CALL
+	cpu.cart.write8(cpu.stackPointer-2, uint8(next&0xFF)) // LSB
+	cpu.cart.write8(cpu.stackPointer-1, uint8(next>>8))   // MSB
+	cpu.stackPointer -= 2
+	cpu.programCounter = target
+}
+
+// di - Disable interrupts
+func di(cpu *CPU) {
+	cpu.inte = false
+	cpu.programCounter++
+}
+
+// inc - Increments the value stored in the given register (or memory location)
+func inc(cpu *CPU) {
+	register := (cpu.currentInstruction() >> 3) & 0x7
+	result := cpu.Add(cpu.GetRegisterValue(register), 1, 0)
+	cpu.SetRegister(result)
+	cpu.programCounter++
+}
+
+// jr - jumps relative to the current program counter based on the byte of
+// immediate data provided
+// NOTE: The immediate byte is a SIGNED value meaning that jumps from
+// -126 to +129 are possible
+
+func jr(cpu *CPU) {
+	cpu.programCounter = cpu.programCounter + 2 + uint16(int8(cpu.immediate8()))
 }
 
 // jrcc - if the specified condition is true, then add the immediate byte
@@ -230,6 +414,32 @@ func jrcc(cpu *CPU) {
 	}
 }
 
+// jpnn - jumps to the specified address
+func jpnn(cpu *CPU) {
+	cpu.programCounter = cpu.immediate16()
+}
+
+// Loads the value of register A to the address 0xFF00+C
+func ldCA(cpu *CPU) {
+	address := uint16(0xFF00) + uint16(cpu.ra)
+	cpu.cart.write8(address, cpu.ra)
+	cpu.programCounter++
+}
+
+// ldrn - Loads 8bit immediate data into the specified register
+func ldrn(cpu *CPU) {
+	cpu.SetRegister(cpu.immediate8())
+	cpu.programCounter += 2
+}
+
+// ldrr - Loads register R1 into R2
+func ldrr(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+	cpu.SetRegister(value)
+	cpu.programCounter++
+}
+
 // Loads 16-bit immediate data into register pairs
 func ld16(cpu *CPU) {
 	data16 := cpu.cart.read16(cpu.programCounter + 1)
@@ -237,8 +447,22 @@ func ld16(cpu *CPU) {
 	cpu.programCounter += 3
 }
 
+// ldHLr - Load the contents of register r into (HL)
+func ldHLr(cpu *CPU) {
+	value := cpu.GetRegisterValue(cpu.currentInstruction() & 0x7)
+	cpu.SetMemoryReference(value)
+	cpu.programCounter++
+}
+
+// ldhna - Loads register A into memory 0xFF00+n
+func ldhna(cpu *CPU) {
+	target := 0xFF00 + uint16(cpu.immediate8())
+	cpu.cart.write8(target, cpu.ra)
+	cpu.programCounter += 2
+}
+
 // Loads A into the memory address HL, then decrements HL by 1
-func lddHL(cpu *CPU) {
+func lddHLA(cpu *CPU) {
 	address := cpu.getHL()
 	cpu.cart.write8(address, cpu.ra)
 	address--
@@ -246,14 +470,62 @@ func lddHL(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// ldnna - loads A into (nn)
+func ldnna(cpu *CPU) {
+	target := cpu.immediate16()
+	cpu.cart.write8(target, cpu.ra)
+	cpu.programCounter += 3
+}
+
 // nop - do nothing
 func nop(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// pop - moves a value off the top of the stack and into the designated register
+// and then increments the stack pointer 2x
+func pop(cpu *CPU) {
+	value := cpu.cart.read16(cpu.stackPointer)
+	target := (cpu.currentInstruction() >> 4) & 0x3
+
+	switch target {
+	case 0x0:
+		cpu.setBC(value)
+	case 0x1:
+		cpu.setDE(value)
+	case 0x2:
+		cpu.setHL(value)
+	case 0x3:
+		cpu.ra = uint8(value >> 8)
+		low := (value & 0xFF)
+		cpu.zero = (low>>7)&0x1 == 0x1
+		cpu.subtract = (low>>6)&0x1 == 0x1
+		cpu.halfCarry = (low>>5)&0x1 == 0x1
+		cpu.carry = (low>>4)&0x1 == 0x1
+
+	}
+	cpu.programCounter++
+	cpu.stackPointer += 2
+}
+
+// push - pushes a specified register pair to the stack
+func push(cpu *CPU) {
+	value := cpu.GetRegisterPair() // returns
+	cpu.stackPointer -= 2
+	cpu.cart.write16(cpu.stackPointer, value)
+	cpu.programCounter++
+}
+
+// ret - sets the programCounter to the value currently on the stack
+func ret(cpu *CPU) {
+	cpu.programCounter = cpu.cart.read16(cpu.stackPointer)
+	cpu.stackPointer += 2
+}
+
 // xor - Exclusive OR with the accumulator
 func xor(cpu *CPU) {
-	value := cpu.GetRegisterValue()
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
 	cpu.ra = cpu.ra ^ value
 	cpu.zero = (cpu.ra == 0)
 	cpu.halfCarry = false
@@ -265,1188 +537,6 @@ func xor(cpu *CPU) {
 func unimplemented(cpu *CPU) {
 	panic("This instruction is not implemented")
 }
-
-/*
-func (mc *microcontroller) data16bit() uint16 {
-	// This functions creates a 16-bit value from the low & high bits
-	// of the currently active instruction. This is used in many places
-	// <instruction> <low bits> <high bits> -> returns (high << 8) | low
-	return uint16((*mc.memory)[mc.programCounter+1]) | uint16((*mc.memory)[mc.programCounter+2])<<8
-}
-
-func (mc *microcontroller) memoryReference() uint16 {
-	// Lots of instructions refer to a memory reference which is the address
-	// stored in the H/L registers. The address is (H << 8) & (L)
-	// H for high, L for low!
-	return (uint16(mc.rh) << 8) | (uint16(mc.rl))
-}
-
-// OP-Codes, arranged alphabetically (in the future)
-
-func (mc *microcontroller) aci() {
-	// Add immediate to accumulator with carry
-	debugPrint(mc, "ACI", 1)
-	data := (*mc.memory)[mc.programCounter+1]
-	carry := uint8(0)
-	if mc.carry {
-		carry = 1
-	}
-	mc.ra = Add(mc.ra, data+carry, mc, 0)
-	mc.programCounter += 2
-}
-
-func (mc *microcontroller) adc() {
-	// Add register or memory to accumulator with carry
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07
-	debugPrint(mc, fmt.Sprintf("ADC %s", string(letterMap[cmd])), 0)
-	carry := uint8(0)
-	if mc.carry {
-		carry = 1
-	}
-	if cmd == 6 { // Memory reference
-		mc.ra = Add(mc.ra, (*mc.memory)[mc.memoryReference()], mc, carry)
-	} else {
-		mc.ra = Add(mc.ra, *mc.rarray[cmd], mc, carry)
-	}
-	// for some reason the i8080-core calculates the half-carry
-	// flag only as the result of the A+VAL, not as part of A+VAL+C
-
-	mc.programCounter++
-}
-
-func (mc *microcontroller) add() {
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07
-	debugPrint(mc, fmt.Sprintf("ADD %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory reference
-		mc.ra = Add(mc.ra, (*mc.memory)[mc.memoryReference()], mc, 0)
-	} else {
-		mc.ra = Add(mc.ra, *mc.rarray[cmd], mc, 0)
-	}
-	mc.programCounter++
-}
-
-func (mc *microcontroller) adi() {
-	// ADD immediate to A
-	debugPrint(mc, "ADI", 1)
-	data := (*mc.memory)[mc.programCounter+1]
-	mc.ra = Add(mc.ra, data, mc, 0)
-	mc.programCounter += 2
-}
-
-func (mc *microcontroller) ana() {
-	// AND register or memory w/ accumulator
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07
-	debugPrint(mc, fmt.Sprintf("ANA %s", string(letterMap[cmd])), 0)
-	data := uint8(0) // placeholder
-	if cmd == 6 {    // Memory location held in HL
-		data = (*mc.memory)[mc.memoryReference()]
-	} else {
-		data = *mc.rarray[cmd]
-	}
-	//mc.auxCarry is not affected per the 8080 programmer's manual
-	// But the 8080/8085 manual states that below is the correct behavior
-	// http://bitsavers.trailing-edge.com/pdf/intel/MCS80/9800301D_8080_8085_Assembly_Language_Programming_Manual_May81.pdf
-	// pg 1-12
-	mc.auxCarry = ((mc.ra | data) & 0x08) != 0
-	mc.ra &= data
-	mc.carry = false // Per spec, carry bit is always reset
-	mc.sign = (mc.ra & 0x80) > 0
-	mc.zero = mc.ra == 0
-	mc.parity = GetParity(mc.ra)
-
-	mc.programCounter++
-}
-
-func (mc *microcontroller) ani() {
-	// AND immediate with accumulator
-	data := (*mc.memory)[mc.programCounter+1]
-	debugPrint(mc, "ANI", 1)
-	//mc.auxCarry is not affected per the 8080 programmer's manual
-	//but some tests rely on this value to be calculated as follows
-	mc.auxCarry = ((mc.ra | data) & 0x08) != 0
-
-	mc.ra = mc.ra & data
-	mc.carry = false // Because of the specification
-	mc.zero = (mc.ra == 0)
-	mc.sign = (mc.ra & 0x80) > 0
-	mc.parity = GetParity(mc.ra)
-
-	mc.programCounter += 2
-}
-
-func (mc *microcontroller) jc() {
-	// Jump if carry
-	debugPrint(mc, "JC", 2)
-	if mc.carry {
-		mc.programCounter = mc.data16bit()
-	} else {
-		mc.programCounter += 3
-	}
-}
-
-func (mc *microcontroller) jm() {
-	// Jump if sign is 1 (minus)
-	debugPrint(mc, "JM", 2)
-	if mc.sign {
-		mc.programCounter = mc.data16bit()
-	} else {
-		mc.programCounter += 3
-	}
-}
-
-func (mc *microcontroller) jmp() {
-	// 0xC3: JMP <low bits><high bits> - Set the program counter to the new address
-	debugPrint(mc, "JMP", 2)
-	mc.programCounter = mc.data16bit()
-}
-
-func (mc *microcontroller) jp() {
-	// Jump if sign is 0 (plus)
-	debugPrint(mc, "JP", 2)
-	if mc.sign {
-		mc.programCounter += 3
-	} else {
-		mc.programCounter = mc.data16bit()
-	}
-}
-
-// jz : Jump if zero bit is 1
-func (mc *microcontroller) jz() {
-	debugPrint(mc, "JZ", 2)
-	if mc.zero {
-		mc.programCounter = mc.data16bit()
-	} else {
-		mc.programCounter += 3
-	}
-}
-
-// jnz : Jump if zero bit is 0
-func (mc *microcontroller) jnz() {
-	debugPrint(mc, "JNZ", 2)
-	if mc.zero {
-		mc.programCounter += 3
-	} else {
-		mc.programCounter = mc.data16bit()
-	}
-}
-
-// jnc : Jump if Carry bit is zero
-func (mc *microcontroller) jnc() {
-	debugPrint(mc, "JNC", 2)
-	if mc.carry {
-		mc.programCounter += 3
-	} else { // No carry so jump
-		mc.programCounter = mc.data16bit()
-	}
-}
-
-// jpe : Jump if Parity bit is one
-func (mc *microcontroller) jpe() {
-	debugPrint(mc, "JPE", 2)
-	if mc.parity {
-		mc.programCounter = mc.data16bit()
-	} else {
-		mc.programCounter += 3
-	}
-}
-
-// jpo : Jump if Parity bit is zero
-func (mc *microcontroller) jpo() {
-	debugPrint(mc, "JPO", 2)
-	if mc.parity {
-		mc.programCounter += 3
-	} else {
-		mc.programCounter = mc.data16bit()
-	}
-}
-
-func (mc *microcontroller) lxi() {
-	// 0x01, 0x11, 0x21, 0x31 <low data> <high data>
-	// Based on the 3rd & 4th most significant bits, set the low/high data
-	// To specific registers in memory.
-	debugPrint(mc, "LXI", 2)
-	target := ((*mc.memory)[mc.programCounter] & 0x30) >> 4
-	low := (*mc.memory)[mc.programCounter+1]
-	high := (*mc.memory)[mc.programCounter+2]
-	switch target {
-	case 0x0: // Registers B, C
-		mc.rb = high
-		mc.rc = low
-	case 0x1: // Registers D, E
-		mc.rd = high
-		mc.re = low
-	case 0x2: // Registers H, L
-		mc.rh = high
-		mc.rl = low
-	case 0x3: // Register sp
-		mc.stackPointer = mc.data16bit()
-	}
-	mc.programCounter += 3
-}
-
-func (mc *microcontroller) mvi() {
-	// (0x06, 0x16, 0x26, 0x36, 0x0E, 0x1E, 0x2E, 0x3E) <data>
-	// Sets <data> to the register encoded within the instruction
-	debugPrint(mc, "MVI", 1)
-	target := ((*mc.memory)[mc.programCounter] & 0x38) >> 3
-	data := (*mc.memory)[mc.programCounter+1]
-	if target == 6 {
-		(*mc.memory)[mc.memoryReference()] = data
-	} else {
-		*(mc.rarray[target]) = data
-	}
-	mc.programCounter += 2
-}
-
-func (mc *microcontroller) call(silent bool) {
-	if !silent {
-		debugPrint(mc, "CALL", 2)
-	}
-	target := mc.data16bit()
-	//pcHigh := uint8(mc.stackPointer >> 8)
-	//pcLow := uint8(mc.stackPointer & 0xFF)
-	next := mc.programCounter + 3                        // The instruction after the CALL
-	(*mc.memory)[mc.stackPointer-2] = uint8(next & 0xFF) // LSB
-	(*mc.memory)[mc.stackPointer-1] = uint8(next >> 8)   // MSB
-	mc.stackPointer -= 2
-	mc.programCounter = target
-}
-
-func (mc *microcontroller) cc() {
-	debugPrint(mc, "CC", 2)
-	// Call if Carry bit is 1
-	if mc.carry {
-		mc.call(true)
-	} else {
-		mc.programCounter += 3
-	}
-}
-
-func (mc *microcontroller) cm() {
-	debugPrint(mc, "CM", 2)
-	// Call if Sign bit is 1
-	if mc.sign {
-		mc.call(true)
-	} else {
-		mc.programCounter += 3
-	}
-}
-
-func (mc *microcontroller) cma() {
-	// Complement Accumulator (A = ~A)
-	debugPrint(mc, "CMA", 0)
-	mc.ra = mc.ra ^ 0xFF
-	mc.programCounter++
-}
-
-func (mc *microcontroller) cmc() {
-	// Complement Carry (carry = !carry)
-	debugPrint(mc, "CMC", 0)
-	mc.carry = !mc.carry
-	mc.programCounter++
-}
-
-func (mc *microcontroller) cmp() {
-	// Compare accumulator with the given register using subtraction
-	// The result is discarded, but the flags are retained
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07 // Bottom 3 bits
-
-	debugPrint(mc, fmt.Sprintf("CMP %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory reference
-		Sub(mc.ra, (*mc.memory)[mc.memoryReference()], mc, 0)
-	} else {
-		Sub(mc.ra, *mc.rarray[cmd], mc, 0)
-	}
-	mc.programCounter++
-}
-
-func (mc *microcontroller) cnc() {
-	// Call if No Carry
-	debugPrint(mc, "CNC", 2)
-	if mc.carry {
-		mc.programCounter += 3
-	} else {
-		mc.call(true)
-	}
-}
-
-func (mc *microcontroller) cnz() {
-	// Call if Not Zero
-	debugPrint(mc, "CNZ", 2)
-	if mc.zero {
-		mc.programCounter += 3
-	} else {
-		mc.call(true)
-	}
-}
-
-func (mc *microcontroller) cp() {
-	debugPrint(mc, "CP", 2)
-	// Call if Sign bit is 0 (+plus)
-	if mc.sign {
-		mc.programCounter += 3
-	} else {
-		mc.call(true)
-	}
-}
-
-func (mc *microcontroller) cpe() {
-	// Call if Parity is Even
-	debugPrint(mc, "CPE", 2)
-	if mc.parity { // parity==1 is even
-		mc.call(true)
-	} else {
-		mc.programCounter += 3
-	}
-}
-func (mc *microcontroller) cpi() {
-	// 0xFE: CPI <data>
-	// Compare immediate with accumulator - compares the byte of immediate data
-	// with the accumulator using subtraction (A - data) and sets some flags
-	debugPrint(mc, "CPI", 1)
-	data := (*mc.memory)[mc.programCounter+1]
-	Sub(mc.ra, data, mc, 0)
-	//fmt.Printf("Comparing %02X to %02X\n", mc.ra, data)
-	mc.programCounter += 2
-}
-func (mc *microcontroller) cpo() {
-	// Call if Parity is Odd
-	debugPrint(mc, "CPO", 2)
-	if mc.parity { // parity==1 is even
-		mc.programCounter += 3
-	} else {
-		mc.call(true)
-	}
-}
-
-func (mc *microcontroller) cz() {
-	// Call if Zero
-	debugPrint(mc, "CZ", 2)
-	if mc.zero {
-		mc.call(true)
-	} else {
-		mc.programCounter += 3
-	}
-}
-
-func (mc *microcontroller) daa() {
-	debugPrint(mc, "DAA", 0)
-	// Decimal adjust accumulator
-	carry := mc.carry
-
-	// If the 4LSB of RA are more than 9 or
-	// if the aux carry bit is set, increment by 6
-	add := uint8(0)
-	if (mc.ra&0xF) > 9 || mc.auxCarry {
-		add += 0x06
-	}
-	// Then, take the accumulator and check to see if the 4MSB
-	// Are more than 9. If they are, increment by six
-	if (((mc.ra >> 4) >= 9) && (mc.ra&0xF > 9)) || carry || (mc.ra>>4) > 9 {
-		add += 0x60
-		// The specification says that if a carry occured out of the
-		// 4MSB, that the carry flag must be set otherwise it is unaffacted
-		// and retains the previous value
-		carry = true
-	}
-
-	mc.ra = Add(mc.ra, add, mc, 0)
-	mc.carry = carry // calculated carry value for this op
-
-	mc.programCounter++
-}
-
-func (mc *microcontroller) dad() {
-	// Double add. This affects carry!
-	hl := (uint16(mc.rh) << 8) | (uint16(mc.rl))
-	cmd := ((*mc.memory)[mc.programCounter] >> 4) & 0x3
-	val := uint16(0)
-	switch cmd {
-	case 0: // BC
-		debugPrint(mc, "DAD BC", 0)
-		val = (uint16(mc.rb) << 8) | (uint16(mc.rc))
-	case 1: // DE
-		debugPrint(mc, "DAD DE", 0)
-		val = (uint16(mc.rd) << 8) | (uint16(mc.re))
-	case 2: // HL
-		debugPrint(mc, "DAD HL", 0)
-		val = hl
-	case 3: // SP
-		debugPrint(mc, "DAD SP", 0)
-		val = mc.stackPointer
-	}
-	result := uint32(hl) + uint32(val)
-	mc.rh = uint8(result >> 8)
-	mc.rl = uint8(result & 0xFF)
-	mc.carry = (result & 0x10000) > 0
-	mc.programCounter++
-}
-
-func (mc *microcontroller) dcx() {
-	// Decrement pair by one
-	cmd := ((*mc.memory)[mc.programCounter] >> 4) & 0x3
-	val := uint16(0)
-	switch cmd {
-	case 0: // BC
-		debugPrint(mc, "DCX BC", 0)
-		val = (uint16(mc.rb) << 8) | (uint16(mc.rc))
-		val--
-		mc.rb = uint8(val >> 8)
-		mc.rc = uint8(val & 0xFF)
-	case 1: // DE
-		debugPrint(mc, "DCX DE", 0)
-		val = (uint16(mc.rd) << 8) | (uint16(mc.re))
-		val--
-		mc.rd = uint8(val >> 8)
-		mc.re = uint8(val & 0xFF)
-	case 2: // HL
-		debugPrint(mc, "DCX HL", 0)
-		val = (uint16(mc.rh) << 8) | (uint16(mc.rl))
-		val--
-		mc.rh = uint8(val >> 8)
-		mc.rl = uint8(val & 0xFF)
-	case 3: // SP
-		debugPrint(mc, "DCX SP", 0)
-		mc.stackPointer--
-	default:
-		panic("DCX case not processed")
-	}
-
-	mc.programCounter++
-}
-
-func (mc *microcontroller) di() {
-	debugPrint(mc, "DI", 0)
-	// Disable interrupt
-	mc.inte = false
-	mc.programCounter++
-}
-
-func (mc *microcontroller) dcr() {
-	// Decrement register
-	letterMap := string("BCDEHLMA")
-
-	oldCarry := mc.carry // For some reason carry is not affected by DCR
-	cmd := ((*mc.memory)[mc.programCounter] >> 3) & 0x07
-	debugPrint(mc, fmt.Sprintf("DCR %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory location held in HL
-		target := (uint16(mc.rh) << 8) | uint16(mc.rl)
-		(*mc.memory)[target] = Sub((*mc.memory)[target], 1, mc, 0)
-	} else { // Just decrement the register
-		*mc.rarray[cmd] = Sub(*mc.rarray[cmd], 1, mc, 0)
-	}
-	mc.carry = oldCarry
-
-	mc.programCounter++
-}
-
-func (mc *microcontroller) ei() {
-	debugPrint(mc, "EI", 0)
-	// Enable Interrupt
-	mc.inte = true
-	mc.programCounter++
-}
-
-func (mc *microcontroller) inr() {
-	// Increment register
-	letterMap := string("BCDEHLMA")
-	oldCarry := mc.carry // For some reason INR doesn't affect carry
-	cmd := ((*mc.memory)[mc.programCounter] >> 3) & 0x07
-	debugPrint(mc, fmt.Sprintf("INR %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory location held in HL
-		target := (uint16(mc.rh) << 8) | uint16(mc.rl)
-		(*mc.memory)[target] = Add((*mc.memory)[target], 1, mc, 0)
-	} else { // Just increment the register
-		*mc.rarray[cmd] = Add(*mc.rarray[cmd], 1, mc, 0)
-	}
-	mc.carry = oldCarry
-	mc.programCounter++
-}
-
-func (mc *microcontroller) halt() {
-	fmt.Printf("halt() is not yet implemented. Caled from %x\n", mc.programCounter)
-	panic("Not yet implemented")
-}
-
-func (mc *microcontroller) inx() {
-	// Increment Register Pair
-	// 00: BC, 01: DE, 10: HL, 11: SP
-	debugPrint(mc, "INX", 0)
-	target := ((*mc.memory)[mc.programCounter] >> 4) & 0x3
-	switch target {
-	case 0: // BC
-		value := ((uint16(mc.rb) << 8) | uint16(mc.rc)) + 1
-		mc.rb = uint8(value >> 8)
-		mc.rc = uint8(value & 0xFF)
-	case 1: // DE
-		value := ((uint16(mc.rd) << 8) | uint16(mc.re)) + 1
-		mc.rd = uint8(value >> 8)
-		mc.re = uint8(value & 0xFF)
-	case 2: // HL
-		value := ((uint16(mc.rh) << 8) | uint16(mc.rl)) + 1
-		mc.rh = uint8(value >> 8)
-		mc.rl = uint8(value & 0xFF)
-	case 3: // SP
-		mc.stackPointer++
-	}
-	mc.programCounter++
-}
-
-func (mc *microcontroller) lda() {
-	debugPrint(mc, "LDA", 2)
-	// Load Accummulator Direct <low> <high>
-	mc.ra = (*mc.memory)[mc.data16bit()]
-	mc.programCounter += 3
-}
-
-func (mc *microcontroller) ldax() {
-	// 0x0A, 0x1A : LDAX (no other data)
-	// Load the contents of the memory address either in B/C or D/E
-	// into the Accumulator
-	debugPrint(mc, "LDAX", 0)
-	instruction := ((*mc.memory)[mc.programCounter] >> 4) & 1
-	var low, high uint8
-	switch instruction {
-	case 0x0:
-		low = mc.rc  // C
-		high = mc.rb // B
-	case 0x1:
-		low = mc.re  // E
-		high = mc.rd // D
-	}
-	address := (uint16(high) << 8) | uint16(low)
-	mc.ra = (*mc.memory)[address]
-	mc.programCounter++
-}
-
-func (mc *microcontroller) lhld() {
-	// Load H&L directly
-	debugPrint(mc, "LHLD", 2)
-	target := mc.data16bit()
-	mc.rl = (*mc.memory)[target]
-	mc.rh = (*mc.memory)[target+1]
-	mc.programCounter += 3
-}
-
-func (mc *microcontroller) mov() {
-	letterMap := string("BCDEHLMA")
-
-	dst := ((*mc.memory)[mc.programCounter] >> 3) & 0x7 // Bits 4-6
-	src := (*mc.memory)[mc.programCounter] & 0x7        // Lowest 3 bits
-	str := fmt.Sprintf("MOV %s%s", string(letterMap[dst]), string(letterMap[src]))
-	debugPrint(mc, str, 0)
-
-	var target *uint8
-	if dst == 6 { // Memory reference
-		target = &(*mc.memory)[mc.memoryReference()] // address of array element
-	} else {
-		target = mc.rarray[dst]
-	}
-
-	var data uint8
-	if src == 6 {
-		data = (*mc.memory)[mc.memoryReference()]
-	} else {
-		data = *(mc.rarray[src])
-	}
-	*target = data
-
-	mc.programCounter++
-}
-func (mc *microcontroller) nop() {
-	debugPrint(mc, "NOP", 0)
-	// 0x0: NOP - Do nothing
-	// a place to hook in other instructions
-	mc.programCounter++
-}
-
-func (mc *microcontroller) ora() {
-	// OR register or memory w/ accumulator
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07
-	debugPrint(mc, fmt.Sprintf("ORA %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory location held in HL
-		target := (uint16(mc.rh) << 8) | uint16(mc.rl)
-		mc.ra |= (*mc.memory)[target]
-	} else { // Just decrement the register
-		mc.ra |= *mc.rarray[cmd]
-	}
-	mc.carry = false // Per spec, carry bit is always reset
-	mc.sign = (mc.ra & 0x80) > 0
-	mc.zero = mc.ra == 0
-	mc.parity = GetParity(mc.ra)
-	// Nothing in spec about mc.auxCarry, but some tests
-	// rely on it being reset
-	mc.auxCarry = false
-	mc.programCounter++
-}
-
-func (mc *microcontroller) ori() {
-	// OR immediate with accumulator
-	data := (*mc.memory)[mc.programCounter+1]
-	debugPrint(mc, "ORI", 1)
-	mc.ra = mc.ra | data
-	mc.carry = false // Because of the specification
-	mc.zero = (mc.ra == 0)
-	mc.sign = (mc.ra & 0x80) > 0
-	mc.parity = GetParity(mc.ra)
-	//mc.auxCarry is not affected per the 8080 programmer's manual
-	// but some tests rely on it being reset
-	mc.auxCarry = false
-	mc.programCounter += 2
-}
-
-func (mc *microcontroller) pchl() {
-	debugPrint(mc, "PCHL", 0)
-	low := uint16(mc.rl)
-	high := uint16(mc.rh) << 8
-	mc.programCounter = high | low
-}
-
-func (mc *microcontroller) pop() {
-	target := ((*mc.memory)[mc.programCounter] >> 4) & 0x3
-	low := (*mc.memory)[mc.stackPointer]
-	high := (*mc.memory)[mc.stackPointer+1]
-	switch target {
-	case 0: // BC
-		debugPrint(mc, "POP BC", 0)
-		mc.rb = high
-		mc.rc = low
-	case 1: // DE
-		debugPrint(mc, "POP DE", 0)
-		mc.rd = high
-		mc.re = low
-	case 2: // HL
-		debugPrint(mc, "POP HL", 0)
-		mc.rh = high
-		mc.rl = low
-	case 3: // flags & A (POP PSW)
-		debugPrint(mc, "POP PSW", 0)
-		mc.sign = ((low >> 7) & 0x1) == 0x1
-		mc.zero = ((low >> 6) & 0x1) == 0x1
-		mc.auxCarry = ((low >> 4) & 0x1) == 0x1
-		mc.carry = (low & 0x1) == 0x1 // LSB
-		mc.parity = ((low >> 2) & 0x1) == 0x1
-		mc.ra = high
-	}
-	mc.programCounter++
-	mc.stackPointer += 2
-}
-
-func (mc *microcontroller) push() {
-	cmd := ((*mc.memory)[mc.programCounter] >> 4) & 0x3
-	cmdMap := []string{"BC", "DE", "HL", "PSW"}
-	cmdStr := fmt.Sprintf("PUSH %s", cmdMap[cmd])
-	debugPrint(mc, cmdStr, 0)
-	var first, second uint8
-	switch cmd {
-	case 0x0: // B & C
-		first = mc.rb
-		second = mc.rc
-	case 0x1: // D & E
-		first = mc.rd
-		second = mc.re
-	case 0x2: // H & L
-		first = mc.rh
-		second = mc.rl
-	case 0x3: // flags & A
-		first = mc.ra
-		second = pswByte(mc)
-	}
-	(*mc.memory)[mc.stackPointer-2] = second
-	(*mc.memory)[mc.stackPointer-1] = first
-	mc.stackPointer -= 2
-	mc.programCounter++
-}
-func (mc *microcontroller) ral() {
-	debugPrint(mc, "RAL", 0)
-	// Rotate one bit to the left. Highest bit goes to carry
-	// Carry becomes LSB
-	carry := uint8(0)
-	if mc.carry {
-		carry = 1
-	}
-	mc.carry = mc.ra&0x80 > 0 // MSB
-	mc.ra = (mc.ra << 1) | carry
-	mc.programCounter++
-}
-
-func (mc *microcontroller) rar() {
-	debugPrint(mc, "RAR", 0)
-	// Rotate accumulator to the right by 1 bit
-	// Carry becomes the LSB of the accumulator
-	// MSB becomes the previous carry value
-
-	carry := uint8(0)
-	if mc.carry {
-		carry = 1
-	}
-	mc.carry = mc.ra&0x1 > 0 // LSB
-	mc.ra = (mc.ra >> 1) | (carry << 7)
-
-	mc.programCounter++
-}
-
-func (mc *microcontroller) ret(silent bool) {
-	low := uint16((*mc.memory)[mc.stackPointer])
-	high := uint16((*mc.memory)[mc.stackPointer+1])
-	target := (high << 8) | low
-	if !silent {
-		debugPrint(mc, fmt.Sprintf("RET %04X", target), 0)
-	}
-	mc.programCounter = target
-	mc.stackPointer += 2
-}
-
-func (mc *microcontroller) retC() {
-	// Return if Carry. Called ret_c because there is already an mc.rc
-	debugPrint(mc, "RC", 0)
-	if mc.carry {
-		mc.ret(true)
-	} else {
-		mc.programCounter++
-	}
-}
-
-func (mc *microcontroller) rlc() {
-	debugPrint(mc, "RLC", 0)
-	// Carry bit is set to MSB
-	// Rotate accumulator left 1 bit
-	// LSB becomes the previous MSB
-	msb := mc.ra >> 7
-
-	if msb == 0x1 {
-		mc.carry = true
-	} else {
-		mc.carry = false
-	}
-
-	mc.ra = (mc.ra << 1) | msb
-	mc.programCounter++
-}
-
-func (mc *microcontroller) rm() {
-	// Return if Sign bit is 1
-	debugPrint(mc, "RM", 0)
-	if mc.sign {
-		mc.ret(true)
-	} else {
-		mc.programCounter++
-	}
-}
-
-func (mc *microcontroller) rnc() {
-	// Return it NOT Carry
-	debugPrint(mc, "RNC", 0)
-	if mc.carry {
-		mc.programCounter++
-	} else {
-		mc.ret(true)
-	}
-}
-
-func (mc *microcontroller) rnz() {
-	// Return it NOT zero
-	debugPrint(mc, "RNZ", 0)
-	if mc.zero {
-		mc.programCounter++
-	} else {
-		mc.ret(true)
-	}
-}
-
-func (mc *microcontroller) rp() {
-	// Return if Sign bit is 0
-	debugPrint(mc, "RP", 0)
-	if mc.sign {
-		mc.programCounter++
-	} else {
-		mc.ret(true)
-	}
-}
-
-func (mc *microcontroller) rpe() {
-	// Return if parity is even
-	debugPrint(mc, "RPE", 0)
-	if mc.parity {
-		mc.ret(true)
-	} else {
-		mc.programCounter++
-	}
-}
-
-func (mc *microcontroller) rpo() {
-	// Return if parity is odd
-	debugPrint(mc, "RPO", 0)
-	if mc.parity {
-		mc.programCounter++
-	} else {
-		mc.ret(true)
-	}
-}
-func (mc *microcontroller) rrc() {
-	debugPrint(mc, "RRC", 0)
-	lowBit := mc.ra & 0x1
-	// Set the carry bit equal to the LSB
-	if lowBit == 0x1 {
-		mc.carry = true
-	} else {
-		mc.carry = false
-	}
-	mc.ra = (mc.ra >> 1) | (lowBit << 7)
-	mc.programCounter++
-}
-func (mc *microcontroller) rst() {
-	// Restart
-	debugPrint(mc, "RST", 0)
-	exp := ((*mc.memory)[mc.programCounter] >> 3) & 0x7
-
-	(*mc.memory)[mc.stackPointer-2] = uint8(mc.programCounter)      // L
-	(*mc.memory)[mc.stackPointer-1] = uint8(mc.programCounter >> 8) // H
-	mc.stackPointer -= 2                                            // The manual says (SP) <- (SP)+2, but this is probably wrong
-
-	mc.programCounter = uint16(exp << 3)
-}
-func (mc *microcontroller) rz() {
-	// Return if ZERO
-	debugPrint(mc, "RZ", 0)
-	if mc.zero {
-		mc.ret(true)
-	} else {
-		mc.programCounter++
-	}
-}
-
-func (mc *microcontroller) sbi() {
-	// Subtract immediate from accumuatlor with borrow
-	debugPrint(mc, "SUI", 1)
-	carry := uint8(0)
-	if mc.carry {
-		carry = 1
-	}
-
-	data := (*mc.memory)[mc.programCounter+1]
-	mc.ra = Sub(mc.ra, data, mc, carry)
-	mc.programCounter += 2
-}
-
-func (mc *microcontroller) shld() {
-	debugPrint(mc, "SHLD", 2)
-	// Store H & L directly to memory
-	target := mc.data16bit()
-	(*mc.memory)[target] = mc.rl
-	(*mc.memory)[target+1] = mc.rh
-	mc.programCounter += 3
-}
-
-func (mc *microcontroller) sphl() {
-	debugPrint(mc, "SPHL", 0)
-	// SP <- HL
-	hl := (uint16(mc.rh) << 8) | (uint16(mc.rl))
-	mc.stackPointer = hl
-	mc.programCounter++
-}
-
-func (mc *microcontroller) sta() {
-	// Store accumulator direct at the given address
-	debugPrint(mc, "STA", 2)
-	(*mc.memory)[mc.data16bit()] = mc.ra
-	mc.programCounter += 3
-}
-
-func (mc *microcontroller) stax() {
-	// 0x02, 0x12 : STAX (no other data)
-	// Store the contents of the accumulator at the location pointed to by B/C or D/E
-	debugPrint(mc, "STAX", 0)
-	instruction := ((*mc.memory)[mc.programCounter] >> 4) & 1
-	var low, high uint8
-	switch instruction {
-	case 0x0:
-		low = mc.rc  // C
-		high = mc.rb // B
-	case 0x1:
-		low = mc.re  // E
-		high = mc.rd // D
-	}
-	address := (uint16(high) << 8) | uint16(low)
-	(*mc.memory)[address] = mc.ra
-	mc.programCounter++
-}
-
-func (mc *microcontroller) stc() {
-	// Set the carry bit
-	debugPrint(mc, "STC", 0)
-	mc.carry = true
-	mc.programCounter++
-}
-
-func (mc *microcontroller) sbb() {
-	// Subtract register or memory from accumulator with borrow
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07 // Bottom 3 bits
-	carry := uint8(0)
-	if mc.carry {
-		carry = 1
-	}
-	debugPrint(mc, fmt.Sprintf("SBB %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory reference
-		mc.ra = Sub(mc.ra, (*mc.memory)[mc.memoryReference()], mc, carry)
-	} else {
-		mc.ra = Sub(mc.ra, *mc.rarray[cmd], mc, carry)
-	}
-	mc.programCounter++
-}
-
-func (mc *microcontroller) sub() {
-	// Subtract based on the register
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07 // Bottom 3 bits
-
-	debugPrint(mc, fmt.Sprintf("SUB %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory reference
-		mc.ra = Sub(mc.ra, (*mc.memory)[mc.memoryReference()], mc, 0)
-	} else {
-		mc.ra = Sub(mc.ra, *mc.rarray[cmd], mc, 0)
-	}
-	mc.programCounter++
-}
-func (mc *microcontroller) sui() {
-	// Subtract immediate from accumuatlor
-	debugPrint(mc, "SUI", 1)
-	data := (*mc.memory)[mc.programCounter+1]
-	mc.ra = Sub(mc.ra, data, mc, 0)
-	mc.programCounter += 2
-}
-
-func (mc *microcontroller) xra() {
-	// XOR register or memory w/ accumulator
-	letterMap := string("BCDEHLMA")
-	cmd := (*mc.memory)[mc.programCounter] & 0x07
-	debugPrint(mc, fmt.Sprintf("XRA %s", string(letterMap[cmd])), 0)
-	if cmd == 6 { // Memory location held in HL
-		target := (uint16(mc.rh) << 8) | uint16(mc.rl)
-		mc.ra ^= (*mc.memory)[target]
-	} else { // Just decrement the register
-		mc.ra ^= *mc.rarray[cmd]
-	}
-	mc.carry = false // Per spec, carry bit is always reset
-	mc.sign = (mc.ra & 0x80) > 0
-	mc.zero = mc.ra == 0
-	mc.parity = GetParity(mc.ra)
-	// Nothing in spec about mc.auxCarry, but some i8080-core
-	// tests rely on it being reset
-	mc.auxCarry = false
-	mc.programCounter++
-}
-
-func (mc *microcontroller) xchg() {
-	debugPrint(mc, "XCHG", 0)
-	// Exchange HL with DE
-	h := mc.rh
-	l := mc.rl
-	mc.rh = mc.rd
-	mc.rl = mc.re
-	mc.rd = h
-	mc.re = l
-	mc.programCounter++
-}
-func (mc *microcontroller) xri() {
-	// XOR immediate with accumulator
-	data := (*mc.memory)[mc.programCounter+1]
-	debugPrint(mc, "XRI", 1)
-	mc.ra = mc.ra ^ data
-	mc.carry = false // Because of the specification
-	mc.zero = (mc.ra == 0)
-	mc.sign = (mc.ra & 0x80) > 0
-	mc.parity = GetParity(mc.ra)
-	//mc.auxCarry is not affected per the 8080 programmer's manual
-	// but, some tests rely on it being set to false
-	mc.auxCarry = false
-	mc.programCounter += 2
-}
-func (mc *microcontroller) xthl() {
-	debugPrint(mc, "XTHL", 0)
-	// Exchange stack with values stores in H&L
-	low := mc.rl
-	high := mc.rh
-
-	mc.rl = (*mc.memory)[mc.stackPointer]
-	mc.rh = (*mc.memory)[mc.stackPointer+1]
-
-	(*mc.memory)[mc.stackPointer] = low
-	(*mc.memory)[mc.stackPointer+1] = high
-	mc.programCounter++
-}
-
-func (mc *microcontroller) run() {
-	instruction := (*mc.memory)[mc.programCounter]
-	switch {
-	case instruction == 0xCE:
-		mc.aci()
-	case (instruction & 0xF8) == 0x88:
-		mc.adc()
-	case (instruction & 0xF8) == 0x80:
-		mc.add()
-	case instruction == 0xC6:
-		mc.adi()
-	case (instruction & 0xF8) == 0xA0:
-		mc.ana()
-	case instruction == 0xE6:
-		mc.ani()
-	case instruction == 0xCD:
-		mc.call(false)
-	case instruction == 0xDC:
-		mc.cc()
-	case instruction == 0xFC:
-		mc.cm()
-	case instruction == 0x2F:
-		mc.cma()
-	case instruction == 0x3F:
-		mc.cmc()
-	case (instruction & 0xF8) == 0xB8:
-		mc.cmp()
-	case instruction == 0xD4:
-		mc.cnc()
-	case instruction == 0xC4:
-		mc.cnz()
-	case instruction == 0xF4:
-		mc.cp()
-	case instruction == 0xEC:
-		mc.cpe()
-	case instruction == 0xFE:
-		mc.cpi()
-	case instruction == 0xE4:
-		mc.cpo()
-	case instruction == 0xCC:
-		mc.cz()
-	case instruction == 0x27:
-		mc.daa()
-	case (instruction & 0xCF) == 0x09:
-		mc.dad()
-	case (instruction & 0xCF) == 0x0B:
-		mc.dcx()
-	case instruction == 0xF3:
-		mc.di()
-	case (instruction & 0xC7) == 0x05:
-		mc.dcr()
-	case instruction == 0xFB:
-		mc.ei()
-	// NOTICE:: Halt MUST be evaulated above MOV because
-	// it's similar to a MOV instruction (bit-wise)
-	case instruction == 0x76:
-		mc.halt()
-	case (instruction & 0xC7) == 0x4:
-		mc.inr()
-	case (instruction & 0xCF) == 0x3: // 0x03, 0x13, 0x23, 0x33
-		mc.inx()
-	case instruction == 0xC3:
-		mc.jmp()
-	case instruction == 0xDA:
-		mc.jc()
-	case instruction == 0xFA:
-		mc.jm()
-	case instruction == 0xC2:
-		mc.jnz()
-	case instruction == 0xD2:
-		mc.jnc()
-	case instruction == 0xF2:
-		mc.jp()
-	case instruction == 0xEA:
-		mc.jpe()
-	case instruction == 0xE2:
-		mc.jpo()
-	case instruction == 0xCA:
-		mc.jz()
-	case instruction == 0x3A:
-		mc.lda()
-	case (instruction == 0x0A) || (instruction == 0x1A):
-		mc.ldax()
-	case instruction == 0x2A:
-		mc.lhld()
-	case instruction&0xCF == 0x1: //  0x01, 0x11, 0x21, 0x31:
-		mc.lxi()
-	case (instruction >> 6) == 0x01:
-		mc.mov()
-	case instruction&0xC7 == 0x6: // 0x06, 0x16, 0x26, 0x36, 0x0E, 0x1E, 0x2E, 0x3E:
-		mc.mvi()
-	case (instruction & 0xC7) == 0x0: // A bunch of undocumented NOP instructions
-		mc.nop()
-	case instruction == 0xF6:
-		mc.ori()
-	case instruction == 0xE9:
-		mc.pchl()
-	case instruction&0xCF == 0xC1: // 0xC1, 0xD1, 0xE1, 0xF1
-		mc.pop()
-	case instruction&0xCF == 0xC5: // 0xC5, 0xD5, 0xE5, 0xF5
-		mc.push()
-	case (instruction & 0xF8) == 0xB0:
-		mc.ora()
-	case instruction == 0x17:
-		mc.ral()
-	case instruction == 0x1F:
-		mc.rar()
-	case instruction == 0xC9:
-		mc.ret(false)
-	case instruction == 0xD8:
-		mc.retC()
-	case instruction == 0x07:
-		mc.rlc()
-	case instruction == 0xF8:
-		mc.rm()
-	case instruction == 0xD0:
-		mc.rnc()
-	case instruction == 0xC0:
-		mc.rnz()
-	case instruction == 0xF0:
-		mc.rp()
-	case instruction == 0xE8:
-		mc.rpe()
-	case instruction == 0xE0:
-		mc.rpo()
-	case instruction == 0x0F:
-		mc.rrc()
-	case (instruction & 0xC7) == 0xC7:
-		mc.rst()
-	case instruction == 0xC8:
-		mc.rz()
-	case instruction == 0xDE:
-		mc.sbi()
-	case (instruction & 0xF8) == 0x98:
-		mc.sbb()
-	case (instruction & 0xF8) == 0x90:
-		mc.sub()
-	case instruction == 0x22:
-		mc.shld()
-	case instruction == 0xF9:
-		mc.sphl()
-	case instruction == 0x32:
-		mc.sta()
-	case instruction == 0x02 || instruction == 0x12:
-		mc.stax()
-	case instruction == 0x37:
-		mc.stc()
-	case instruction == 0xD6:
-		mc.sui()
-	case (instruction & 0xF8) == 0xA8:
-		mc.xra()
-	case instruction == 0xEB:
-		mc.xchg()
-	case instruction == 0xEE:
-		mc.xri()
-	case instruction == 0xE3:
-		mc.xthl()
-	default:
-		err := fmt.Sprintf("[%d] Unknown instruction: %X ", mc.programCounter, instruction)
-		fmt.Println(err)
-		panic(err)
-	}
-	mc.instructionsExecuted++
-}
-*/
 
 func (cpu *CPU) step() {
 	instruction := cpu.currentInstruction()

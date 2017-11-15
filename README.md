@@ -10,6 +10,7 @@ Built in GO with lots of help from the following resources:
 2) Instructions in tabular format: http://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html
 3) Memory layout: http://gbdev.gg8.se/wiki/articles/The_Cartridge_Header
 4) Instruction encoding: http://www.classiccmp.org/dunfield/r/8080.txt
+5) Test ROMs: https://github.com/retrio/gb-test-roms/
 
 Known Issues:
 1) Doesn't do anything yet

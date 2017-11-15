@@ -1,6 +1,5 @@
 package main
 
-/*
 import "testing"
 
 // MathTest : A structure which has input & output values for a math test
@@ -12,63 +11,55 @@ const (
 )
 
 type MathTest struct {
-	op       Operation // Type of math we're doing
-	a        uint8     // In
-	b        uint8     // In
-	result   uint8     // Out
-	zero     bool      // Out: 1 if result is 0x0
-	carry    bool      // Out: 1 if carry out of the MSB
-	parity   bool      // Out: 1 if the number of 1-bits is even
-	auxCarry bool      // Out: 1 if carry out of MSB nibble bit
-	sign     bool      // Out: equal to the 7th bit (1 if negative)
+	op        Operation // Type of math we're doing
+	a         uint8     // In
+	b         uint8     // In
+	result    uint8     // Out
+	zero      bool      // Out: 1 if result is 0x0
+	carry     bool      // Out: 1 if carry out of the MSB
+	halfCarry bool      // Out: 1 if carry out of MSB nibble bit
+	subtract  bool      // Out: 1 if a subtraction was performed
 }
 
-//             operation,   a,   b  result, zero, carry, parity, half, sign
+//             operation,   a,   b  result, zero, carry, half, subtract
 var subTests = []MathTest{
-	//MathTest{subtraction, 0x01, 0x2, 0xFF,
-	MathTest{subtraction, 0x4A, 0x40, 0x0A, false, false, true, false, false},
-	MathTest{subtraction, 0x1A, 0x0C, 0x0E, false, false, false, false, false},
-	MathTest{addition, 0x2E, 0x6C, 0x9A, false, false, true, true, true},
-	MathTest{addition, 0xAE, 0x74, 0x22, false, true, true, true, false},
-	MathTest{addition, 0x2E, 0x74, 0xA2, false, false, false, true, true},
-	MathTest{addition, 0xA7, 0x59, 0x00, true, true, true, true, false},
-	MathTest{subtraction, 0x11, 0x11, 0x0, true, false, true, true, false},
-	MathTest{subtraction, 0xF5, 0xF5, 0x0, true, false, true, true, false},
-	MathTest{addition, 12, 0xF1, 0xFD, false, false, false, false, true}, // 0xF1 = -15, 0xFD is -3
-	MathTest{subtraction, 12, 15, 0xFD, false, true, false, false, true}, // 0xFD is -3
-	MathTest{subtraction, 197, 98, 99, false, false, true, true, false},
+	MathTest{addition, 0x44, 0x11, 0x55, false, false, false, false},
+	MathTest{addition, 0x23, 0x33, 0x56, false, false, false, false},
+	//MathTest{addition, 0x2E, 0x74, 0xA2, false, false, false, true, true},
+	//MathTest{addition, 0xA7, 0x59, 0x00, true, true, true, true, false},
+	//MathTest{subtraction, 0x11, 0x11, 0x0, true, false, true, true, false},
+	//MathTest{subtraction, 0xF5, 0xF5, 0x0, true, false, true, true, false},
+	//MathTest{addition, 12, 0xF1, 0xFD, false, false, false, false, true}, // 0xF1 = -15, 0xFD is -3
+	//MathTest{subtraction, 12, 15, 0xFD, false, true, false, false, true}, // 0xFD is -3
+	//MathTest{subtraction, 197, 98, 99, false, false, true, true, false},
 }
 
-// TestSub : Run a series of subtraction math tests based on the subTests array above
-func TestSub(t *testing.T) {
+// TestMath - run a series of tests on the ALU
+func TestMath(t *testing.T) {
 	for _, test := range subTests {
-		mc := newMicrocontroller()
+		cpu := newCPU()
 		var result uint8
 		if test.op == subtraction {
-			result = Sub(test.a, test.b, mc, 0)
+			result = cpu.Sub(test.a, test.b, 0)
 			t.Logf("%d - %d = %d\n", test.a, test.b, result)
 		} else if test.op == addition {
-			result = Add(test.a, test.b, mc, 0)
+			result = cpu.Add(test.a, test.b, 0)
 			t.Logf("%d + %d = %d\n", test.a, test.b, result)
 		}
 		if result != test.result {
 			t.Errorf("Result is incorrect. Expected: %X, Got %X", test.result, result)
 		}
-		if test.zero != mc.zero {
-			t.Errorf("Zero bit is incorrect. Expected %t, Got %t", test.zero, mc.zero)
+		if test.zero != cpu.zero {
+			t.Errorf("Zero bit is incorrect. Expected %t, Got %t", test.zero, cpu.zero)
 		}
-		if test.carry != mc.carry {
-			t.Errorf("Carry bit is incorrect. Expected %t, Got %t", test.carry, mc.carry)
+		if test.carry != cpu.carry {
+			t.Errorf("Carry bit is incorrect. Expected %t, Got %t", test.carry, cpu.carry)
 		}
-		if test.parity != mc.parity {
-			t.Errorf("Parity bit is incorrect. Expected %t, Got %t", test.parity, mc.parity)
+		if test.halfCarry != cpu.halfCarry {
+			t.Errorf("halfCarry bit is incorrect. Exepected %t, Got %t", test.halfCarry, cpu.halfCarry)
 		}
-		if test.auxCarry != mc.auxCarry {
-			t.Errorf("AuxCarry bit is incorrect. Exepected %t, Got %t", test.auxCarry, mc.auxCarry)
-		}
-		if test.sign != mc.sign {
-			t.Errorf("Sign bit is incorrect. Expected %t, Got %t", test.sign, mc.sign)
+		if test.subtract != cpu.subtract {
+			t.Errorf("Subtract bit is incorrect. Expected %t, Got %t", test.subtract, cpu.subtract)
 		}
 	}
 }
-*/

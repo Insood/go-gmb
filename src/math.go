@@ -34,37 +34,37 @@ This is based on the implementation of i8080-core
 var addHalfCarryTable = []bool{false, false, true, false, true, false, true, true}
 var subHalfCarryTable = []bool{true, false, false, false, true, true, true, false}
 
+*/
+
 // Sub : Subtracts B from A and then sets micro controller flags
 // the borrow argument is used by SBB, everything else should call it with a value of 0
-func Sub(a uint8, b uint8, cpu *CPU, borrow uint8) uint8 {
-	result16 := uint16(a) - uint16(b) - uint16(borrow)
-	result8 := uint8(result16)
-	mc.zero = result8 == 0x0
-	mc.sign = (result8 >> 7) == 0x1
-	mc.parity = GetParity(result8)
-	mc.carry = result16&0x100 > 0
+func (cpu *CPU) Sub(a uint8, b uint8, borrow uint8) uint8 {
+	panic("Not yet implemented")
+	/*
+		result16 := uint16(a) - uint16(b) - uint16(borrow)
+		result8 := uint8(result16)
+		mc.zero = result8 == 0x0
+		mc.sign = (result8 >> 7) == 0x1
+		mc.parity = GetParity(result8)
+		mc.carry = result16&0x100 > 0
 
-	index := (((a & 0x88) >> 1) | ((b & 0x88) >> 2) | ((result8 & 0x88) >> 3)) & 0x7
-	mc.auxCarry = subHalfCarryTable[index]
-	return result8
+		index := (((a & 0x88) >> 1) | ((b & 0x88) >> 2) | ((result8 & 0x88) >> 3)) & 0x7
+		mc.auxCarry = subHalfCarryTable[index]
+		return result8
+	*/
+	return 0
 }
 
-// Add : Adds two 1-byte values together and sets microcontroller flags
+// Add : Adds two 1-byte values together and sets the flags
 //       the carry flag is used by the ADC instructions
-func Add(a uint8, b uint8, cpu *CPU, carry uint8) uint8 {
+func (cpu *CPU) Add(a uint8, b uint8, carry uint8) uint8 {
 	// Do bitwise addition
 	result16 := uint16(a) + uint16(b) + uint16(carry)
 	result8 := uint8(result16)
 
-	mc.zero = result8 == 0x0
-	mc.carry = result16&0x100 != 0x0 // The Carry bit is set when the result is positive (overflow)
-	// the i8080-core emulator uses the halfcarry table because apparently the implementation of
-	// the KR580VM80A is such that the half carry flag is calculated not based on A+VAL+C
-	// but based on the 'magic' that happens in this half carry table
-	index := (((a & 0x88) >> 1) | ((b & 0x88) >> 2) | ((result8 & 0x88) >> 3)) & 0x7
-	mc.auxCarry = addHalfCarryTable[index]
-	mc.sign = (result8 >> 7) == 0x1
-	mc.parity = GetParity(result8)
+	cpu.zero = result8 == 0x0
+	cpu.subtract = false
+	// cpu.carry is not affected
+	cpu.halfCarry = ((a&0xF)+(b&0xF))&0x10 == 0x10
 	return result8
 }
-*/

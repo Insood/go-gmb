@@ -11,7 +11,7 @@ var DEBUGMODE = true
 
 func debugPrintHeader(cpu *CPU) {
 	if cpu.instructionsExecuted%20 == 0 {
-		fmt.Printf("ADDR : instruction\t\t\tB  C  D  E  H  L  A  PW ZNHC---- SP\n")
+		fmt.Printf("ADDR : instruction\t\t\tB  C  D  E  H  L  A  ZNHC---- SP\n")
 	}
 }
 
@@ -49,7 +49,7 @@ func debugPrint(cpu *CPU, name string, values int) {
 
 	//                      rb  rc   rd   re   rh   rl   ra   psw  SP
 	output += fmt.Sprintf("%02X %02X %02X %02X %02X %02X %02X %08b %04X\n",
-		cpu.rb, cpu.rc, cpu.rd, cpu.re, cpu.rh, cpu.rl, cpu.ra, pswByte(cpu), cpu.stackPointer)
+		cpu.rb, cpu.rc, cpu.rd, cpu.re, cpu.rh, cpu.rl, cpu.ra, cpu.pswByte(), cpu.stackPointer)
 	fmt.Print(output)
 }
 

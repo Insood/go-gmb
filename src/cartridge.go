@@ -30,6 +30,15 @@ func (cart *Cartridge) write8(address uint16, data uint8) {
 	cart.memory[address] = data
 }
 
+// Writes a 16-bit value to the 16-bit address provided
+// The low byte of data is stored at (address)
+// The high byte of data is stored at (address+1)
+func (cart * Cartridge) write16(address uint16, data uint16){
+	cart.memory[address] = uint8(data & 0xFF)
+	cart.memory[address+1] = uint8(data >> 8)
+}
+
+
 // loadROM - Reads in the ROM stored in the romname file
 // and returns a Cartridge instance that can then be read from/written to
 // TODO: Only supports 32KB ROMs (ie: tetris). Implement MBC Type 1+ cartridges
