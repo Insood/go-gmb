@@ -28,16 +28,18 @@ func (cart *Cartridge) read16(address uint16) uint16 {
 // TODO: Check to make sure that data is being written to RAM and not ROM
 func (cart *Cartridge) write8(address uint16, data uint8) {
 	cart.memory[address] = data
+	if address == 0xFF01 { // Writing to the serial port; used by the test ROM to give output
+		fmt.Print(data)
+	}
 }
 
 // Writes a 16-bit value to the 16-bit address provided
 // The low byte of data is stored at (address)
 // The high byte of data is stored at (address+1)
-func (cart * Cartridge) write16(address uint16, data uint16){
+func (cart *Cartridge) write16(address uint16, data uint16) {
 	cart.memory[address] = uint8(data & 0xFF)
 	cart.memory[address+1] = uint8(data >> 8)
 }
-
 
 // loadROM - Reads in the ROM stored in the romname file
 // and returns a Cartridge instance that can then be read from/written to
