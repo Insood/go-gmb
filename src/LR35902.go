@@ -53,8 +53,37 @@ func (cpu *CPU) pswByte() uint8 {
 }
 
 func (cpu *CPU) initializeMainInstructionSet() {
+	cpu.mainInstructions[0x8F] = Instruction{"ADC A,A", 1, adc, 4}
+	cpu.mainInstructions[0x88] = Instruction{"ADC A,B", 1, adc, 4}
+	cpu.mainInstructions[0x89] = Instruction{"ADC A,C", 1, adc, 4}
+	cpu.mainInstructions[0x8A] = Instruction{"ADC A,D", 1, adc, 4}
+	cpu.mainInstructions[0x8B] = Instruction{"ADC A,E", 1, adc, 4}
+	cpu.mainInstructions[0x8C] = Instruction{"ADC A,H", 1, adc, 4}
+	cpu.mainInstructions[0x8D] = Instruction{"ADC A,L", 1, adc, 4}
+	cpu.mainInstructions[0x8E] = Instruction{"ADC A,(HL)", 1, adc, 8}
+	cpu.mainInstructions[0xCE] = Instruction{"ADC A, d8", 2, adcn, 8}
+	cpu.mainInstructions[0x87] = Instruction{"ADD A, A", 1, add, 4}
+	cpu.mainInstructions[0x80] = Instruction{"ADD A, B", 1, add, 4}
+	cpu.mainInstructions[0x81] = Instruction{"ADD A, C", 1, add, 4}
+	cpu.mainInstructions[0x82] = Instruction{"ADD A, D", 1, add, 4}
+	cpu.mainInstructions[0x83] = Instruction{"ADD A, E", 1, add, 4}
+	cpu.mainInstructions[0x84] = Instruction{"ADD A, H", 1, add, 4}
+	cpu.mainInstructions[0x85] = Instruction{"ADD A, L", 1, add, 4}
+	cpu.mainInstructions[0x86] = Instruction{"ADD A, (HL)", 1, add, 8}
 	cpu.mainInstructions[0xC6] = Instruction{"ADD A, d8", 2, adi, 8}
-
+	cpu.mainInstructions[0x09] = Instruction{"ADD HL, BC", 1, addhl, 8}
+	cpu.mainInstructions[0x19] = Instruction{"ADD HL, DE", 1, addhl, 8}
+	cpu.mainInstructions[0x29] = Instruction{"ADD HL, HL", 1, addhl, 8}
+	cpu.mainInstructions[0x39] = Instruction{"ADD HL, SP", 1, addhl, 8}
+	cpu.mainInstructions[0xE8] = Instruction{"ADD SP, n", 2, addspn, 16}
+	cpu.mainInstructions[0xA7] = Instruction{"AND A, A", 1, and, 4}
+	cpu.mainInstructions[0xA0] = Instruction{"AND A, B", 1, and, 4}
+	cpu.mainInstructions[0xA1] = Instruction{"AND A, C", 1, and, 4}
+	cpu.mainInstructions[0xA2] = Instruction{"AND A, D", 1, and, 4}
+	cpu.mainInstructions[0xA3] = Instruction{"AND A, E", 1, and, 4}
+	cpu.mainInstructions[0xA4] = Instruction{"AND A, H", 1, and, 4}
+	cpu.mainInstructions[0xA5] = Instruction{"AND A, L", 1, and, 4}
+	cpu.mainInstructions[0xA6] = Instruction{"AND A, (HL)", 1, and, 8}
 	cpu.mainInstructions[0xE6] = Instruction{"AND d8", 2, ani, 8}
 
 	cpu.mainInstructions[0xCD] = Instruction{"CALL", 3, call, 24}
@@ -62,8 +91,17 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0xCC] = Instruction{"CALL Z", 3, callcc, 24}
 	cpu.mainInstructions[0xD4] = Instruction{"CALL NC", 3, callcc, 24}
 	cpu.mainInstructions[0xDC] = Instruction{"CALL C", 3, callcc, 24}
-
+	cpu.mainInstructions[0x3F] = Instruction{"CCF", 1, ccf, 4}
+	cpu.mainInstructions[0xBF] = Instruction{"CP A", 1, cpn, 4}
+	cpu.mainInstructions[0xB8] = Instruction{"CP B", 1, cpn, 4}
+	cpu.mainInstructions[0xB9] = Instruction{"CP C", 1, cpn, 4}
+	cpu.mainInstructions[0xBA] = Instruction{"CP D", 1, cpn, 4}
+	cpu.mainInstructions[0xBB] = Instruction{"CP E", 1, cpn, 4}
+	cpu.mainInstructions[0xBC] = Instruction{"CP H", 1, cpn, 4}
+	cpu.mainInstructions[0xBD] = Instruction{"CP L", 1, cpn, 4}
+	cpu.mainInstructions[0xBE] = Instruction{"CP (HL)", 1, cpn, 8}
 	cpu.mainInstructions[0xFE] = Instruction{"CP d8", 2, cpi, 8}
+	cpu.mainInstructions[0x2F] = Instruction{"CPL", 1, cpl, 4}
 
 	cpu.mainInstructions[0x3D] = Instruction{"DEC A", 1, dec, 4}
 	cpu.mainInstructions[0x05] = Instruction{"DEC B", 1, dec, 4}
@@ -73,7 +111,10 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x25] = Instruction{"DEC H", 1, dec, 4}
 	cpu.mainInstructions[0x2D] = Instruction{"DEC L", 1, dec, 4}
 	cpu.mainInstructions[0x35] = Instruction{"DEC (HL)", 1, dec, 12}
-
+	cpu.mainInstructions[0x0B] = Instruction{"DEC BC", 1, decrp, 8}
+	cpu.mainInstructions[0x1B] = Instruction{"DEC DE", 1, decrp, 8}
+	cpu.mainInstructions[0x2B] = Instruction{"DEC HL", 1, decrp, 8}
+	cpu.mainInstructions[0x3B] = Instruction{"DEC SP", 1, decrp, 8}
 	cpu.mainInstructions[0xF3] = Instruction{"DI", 1, di, 4}
 
 	cpu.mainInstructions[0x3C] = Instruction{"INC A", 1, inc, 4}
@@ -89,7 +130,7 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x13] = Instruction{"INC DE", 1, incrp, 8}
 	cpu.mainInstructions[0x23] = Instruction{"INC HL", 1, incrp, 8}
 	cpu.mainInstructions[0x33] = Instruction{"INC SP", 1, incrp, 8}
-
+	cpu.mainInstructions[0xE9] = Instruction{"JP (HL)", 1, jphl, 4}
 	cpu.mainInstructions[0xC3] = Instruction{"JP nn", 3, jpnn, 12}
 	cpu.mainInstructions[0x18] = Instruction{"JR", 2, jr, 8}
 	cpu.mainInstructions[0x20] = Instruction{"JR NZ,r8", 2, jrcc, 12}
@@ -104,7 +145,7 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x32] = Instruction{"LD (HL-), A", 1, lddHLA, 8}
 	cpu.mainInstructions[0x2A] = Instruction{"LD A, (HL+)", 1, ldiAHL, 8}
 	cpu.mainInstructions[0x22] = Instruction{"LD (HL+), A", 1, ldiHLA, 8}
-
+	cpu.mainInstructions[0x12] = Instruction{"LD (DE), A", 1, ldDEA, 8}
 	cpu.mainInstructions[0x70] = Instruction{"LD (HL) B", 1, ldHLr, 8}
 	cpu.mainInstructions[0x71] = Instruction{"LD (HL) C", 1, ldHLr, 8}
 	cpu.mainInstructions[0x72] = Instruction{"LD (HL) D", 1, ldHLr, 8}
@@ -113,6 +154,7 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x75] = Instruction{"LD (HL) L", 1, ldHLr, 8}
 	// 0x76 is HALT. There is no LD (HL) (HL)
 	cpu.mainInstructions[0x77] = Instruction{"LD (HL) A", 1, ldHLr, 8}
+	cpu.mainInstructions[0xF8] = Instruction{"LD HL, SP+n", 2, ldhlspn, 12}
 
 	cpu.mainInstructions[0x06] = Instruction{"LD B, d8", 2, ldrn, 8}
 	cpu.mainInstructions[0x0E] = Instruction{"LD C, d8", 2, ldrn, 8}
@@ -195,6 +237,8 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0xEA] = Instruction{"LD (nn), A", 3, ldnna, 16}
 	cpu.mainInstructions[0x08] = Instruction{"LD (nn), SP", 3, ldnnsp, 20}
 
+	cpu.mainInstructions[0xF9] = Instruction{"LD SP, HL", 1, ldsphl, 8}
+
 	cpu.mainInstructions[0x00] = Instruction{"NOP", 1, nop, 4}
 
 	cpu.mainInstructions[0xB0] = Instruction{"OR B", 1, or, 4}
@@ -205,6 +249,7 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0xB5] = Instruction{"OR L", 1, or, 4}
 	cpu.mainInstructions[0xB6] = Instruction{"OR (HL)", 1, or, 8}
 	cpu.mainInstructions[0xB7] = Instruction{"OR A", 1, or, 4}
+	cpu.mainInstructions[0xF6] = Instruction{"OR d8", 2, ori, 8}
 
 	cpu.mainInstructions[0xC1] = Instruction{"POP BC", 1, pop, 12}
 	cpu.mainInstructions[0xD1] = Instruction{"POP DE", 1, pop, 12}
@@ -217,7 +262,29 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0xF5] = Instruction{"PUSH AF", 1, push, 16}
 	cpu.mainInstructions[0x1F] = Instruction{"RRA", 1, rra, 4}
 	cpu.mainInstructions[0xC9] = Instruction{"RET", 1, ret, 16}
+	cpu.mainInstructions[0xC0] = Instruction{"RET NZ", 3, retcc, 8}
+	cpu.mainInstructions[0xC8] = Instruction{"RET Z", 3, retcc, 8}
+	cpu.mainInstructions[0xD0] = Instruction{"RET NC", 3, retcc, 8}
+	cpu.mainInstructions[0xD8] = Instruction{"RET C", 3, retcc, 8}
 
+	cpu.mainInstructions[0x9F] = Instruction{"SBC A, A", 1, sbc, 4}
+	cpu.mainInstructions[0x98] = Instruction{"SBC A, B", 1, sbc, 4}
+	cpu.mainInstructions[0x99] = Instruction{"SBC A, C", 1, sbc, 4}
+	cpu.mainInstructions[0x9A] = Instruction{"SBC A, D", 1, sbc, 4}
+	cpu.mainInstructions[0x9B] = Instruction{"SBC A, E", 1, sbc, 4}
+	cpu.mainInstructions[0x9C] = Instruction{"SBC A, H", 1, sbc, 4}
+	cpu.mainInstructions[0x9D] = Instruction{"SBC A, L", 1, sbc, 4}
+	cpu.mainInstructions[0x9E] = Instruction{"SBC A, (HL)", 1, sbc, 8}
+	cpu.mainInstructions[0xDE] = Instruction{"SBC A, d8", 2, sbcd8, 8}
+	cpu.mainInstructions[0x37] = Instruction{"SCF", 1, scf, 4}
+	cpu.mainInstructions[0x97] = Instruction{"SUB A, A", 1, sub, 4}
+	cpu.mainInstructions[0x90] = Instruction{"SUB A, B", 1, sub, 4}
+	cpu.mainInstructions[0x91] = Instruction{"SUB A, C", 1, sub, 4}
+	cpu.mainInstructions[0x92] = Instruction{"SUB A, D", 1, sub, 4}
+	cpu.mainInstructions[0x93] = Instruction{"SUB A, E", 1, sub, 4}
+	cpu.mainInstructions[0x94] = Instruction{"SUB A, H", 1, sub, 4}
+	cpu.mainInstructions[0x95] = Instruction{"SUB A, L", 1, sub, 4}
+	cpu.mainInstructions[0x96] = Instruction{"SUB A, (HL)", 1, sub, 8}
 	cpu.mainInstructions[0xD6] = Instruction{"SUB d8", 2, sbi, 8}
 
 	cpu.mainInstructions[0xA8] = Instruction{"XOR B", 1, xor, 4}
@@ -251,6 +318,15 @@ func (cpu *CPU) initializeExtendedInstructionSet() {
 	cpu.extendedInstructions[0x3D] = Instruction{"SRL L", 1, srl, 8}
 	cpu.extendedInstructions[0x3E] = Instruction{"SRL (HL)", 1, srl, 16}
 
+	cpu.extendedInstructions[0x37] = Instruction{"SWAP A", 1, swap, 8}
+	cpu.extendedInstructions[0x30] = Instruction{"SWAP B", 1, swap, 8}
+	cpu.extendedInstructions[0x31] = Instruction{"SWAP C", 1, swap, 8}
+	cpu.extendedInstructions[0x32] = Instruction{"SWAP D", 1, swap, 8}
+	cpu.extendedInstructions[0x33] = Instruction{"SWAP E", 1, swap, 8}
+	cpu.extendedInstructions[0x34] = Instruction{"SWAP H", 1, swap, 8}
+	cpu.extendedInstructions[0x35] = Instruction{"SWAP L", 1, swap, 8}
+	cpu.extendedInstructions[0x36] = Instruction{"SWAP (HL)", 1, swap, 16}
+
 	// Target register: lowest 3 bits
 
 	// BIT instructions (4x, 5x, 6x, 7x)
@@ -269,11 +345,28 @@ func (cpu *CPU) initializeExtendedInstructionSet() {
 	}
 
 	// RES instructions (8x, 9x, Ax, Bx)
-	// <10XX>
+	for i := 0x80; i < 0xC0; i++ {
+		whichBit := (i >> 3) & 0x7
+		registerName := registerNames[i&0x7]
+		instructionName := fmt.Sprintf("RES %d %s", whichBit, registerName)
+		if i&0x7 != 6 {
+			cpu.extendedInstructions[i] = Instruction{instructionName, 1, res, 8}
+		} else { // Instructions which access (HL) consume twice as many cycles
+			cpu.extendedInstructions[i] = Instruction{instructionName, 1, res, 16}
+		}
+	}
 
 	// SET instructions (Cx, Dx, Ex, Fx)
-	// <11XX>
-
+	for i := 0xC0; i <= 0xFF; i++ {
+		whichBit := (i >> 3) & 0x7
+		registerName := registerNames[i&0x7]
+		instructionName := fmt.Sprintf("SET %d %s", whichBit, registerName)
+		if i&0x7 != 6 {
+			cpu.extendedInstructions[i] = Instruction{instructionName, 1, set, 8}
+		} else { // Instructions which access (HL) consume twice as many cycles
+			cpu.extendedInstructions[i] = Instruction{instructionName, 1, set, 16}
+		}
+	}
 }
 
 func newCPU() *CPU {
@@ -284,7 +377,7 @@ func newCPU() *CPU {
 
 	for i := 0; i <= 255; i++ {
 		cpu.mainInstructions[i] = Instruction{"Unimplemented", 0, unimplemented, 0}
-		cpu.extendedInstructions[i] = Instruction{"Unimplemented", 0, unimplemented, 0}
+		cpu.extendedInstructions[i] = Instruction{"Unimplemented", 0, unimplementedExtended, 0}
 	}
 
 	cpu.initializeMainInstructionSet()
@@ -414,10 +507,95 @@ func (cpu *CPU) immediate16() uint16 {
 	return cpu.cart.read16(cpu.programCounter + 1)
 }
 
+// adc - add the given register to A with carry
+func adc(cpu *CPU) {
+	value := cpu.GetRegisterValue(cpu.currentInstruction() & 0x7)
+	if cpu.carry {
+		cpu.ra = cpu.Add(cpu.ra, value, 1)
+	} else {
+		cpu.ra = cpu.Add(cpu.ra, value, 0)
+	}
+	cpu.programCounter++
+}
+
+// adc - add immediate value to with carry
+func adcn(cpu *CPU) {
+	carry := uint8(0)
+	if cpu.carry {
+		carry = 1
+	}
+	cpu.ra = cpu.Add(cpu.ra, cpu.immediate8(), carry)
+	cpu.programCounter += 2
+}
+
+// add - add the value in the given register to A
+func add(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+	cpu.ra = cpu.Add(cpu.ra, value, 0)
+	cpu.programCounter++
+}
+
+// addhl - Adds the value of the given register pair (or SP) to HL
+// and then sets HL
+func addhl(cpu *CPU) {
+	target := (cpu.currentInstruction() >> 4) & 0x3
+	value := uint16(0)
+	// The existing GetRegisterPair() function calls getAF() for case 0x3
+	// so let's unfold the function here
+	switch target {
+	case 0x0:
+		value = cpu.getBC()
+	case 0x1:
+		value = cpu.getDE()
+	case 0x2:
+		value = cpu.getHL()
+	case 0x3:
+		value = cpu.stackPointer
+	}
+	hl := cpu.getHL()
+	result32 := uint32(hl) + uint32(value)
+
+	// cpu.zero - not affected
+	cpu.subtract = false
+	cpu.carry = result32 > 0xFFFF                 // Overflow into 16th bit
+	if ((value & 0xFFF) + (hl & 0xFFF)) > 0xFFF { // overflow into 12th bit
+		cpu.halfCarry = true
+	} else {
+		cpu.halfCarry = false
+	}
+	cpu.setHL(uint16(result32))
+	cpu.programCounter++
+}
+
+// addspn - Add n to the stack pointer
+func addspn(cpu *CPU) {
+	// This function is not documented very well in the GameBoy CPU Manual
+	// the implementation below is cribbed from the MAME emulator
+	n := cpu.immediate8()
+	spLower := uint8(cpu.stackPointer & 0xFF)
+	cpu.Add(n, spLower, 0) // Set the carry/half flags, but discard the result
+	cpu.zero = false
+	cpu.subtract = false
+	cpu.stackPointer += uint16(n)
+	cpu.programCounter += 2
+}
+
 // adi - Adds the immediate value to A
 func adi(cpu *CPU) {
 	cpu.ra = cpu.Add(cpu.ra, cpu.immediate8(), 0)
 	cpu.programCounter += 2
+}
+
+// and - perform a logical AND of A with the given register
+func and(cpu *CPU) {
+	value := cpu.GetRegisterValue(cpu.currentInstruction() & 0x7)
+	cpu.ra = cpu.ra & value
+	cpu.zero = cpu.ra == 0x0
+	cpu.subtract = false
+	cpu.halfCarry = true
+	cpu.carry = false
+	cpu.programCounter++
 }
 
 // ani - performs a logical AND of A with the immediate value
@@ -464,11 +642,37 @@ func callcc(cpu *CPU) {
 	}
 }
 
+// ccf - complement carry flag (!cpu.Carry)
+func ccf(cpu *CPU) {
+	cpu.carry = !cpu.carry
+	// cpu.zero - not affected
+	cpu.subtract = false
+	cpu.halfCarry = false
+	cpu.programCounter++
+}
+
 // cpi - Compare A with the immediate value
 func cpi(cpu *CPU) {
 	value := cpu.immediate8()
 	cpu.Sub(cpu.ra, value, 0) // Discard the result, we're only interested in setting the flags
 	cpu.programCounter += 2
+}
+
+// cpl - Complement A register (bitwise NOT)
+func cpl(cpu *CPU) {
+	cpu.ra = ^cpu.ra
+	// cpu.zero - not affected
+	// cpu.carry - not affected
+	cpu.subtract = true
+	cpu.halfCarry = true
+	cpu.programCounter++
+}
+
+// cpn - compare A with the given register by doing A-n and throwing away the result
+func cpn(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	cpu.Sub(cpu.ra, cpu.GetRegisterValue(register), 0)
+	cpu.programCounter++
 }
 
 // dec - decrement the given register by 1 and set some flags
@@ -481,6 +685,27 @@ func dec(cpu *CPU) {
 	cpu.subtract = true
 	cpu.zero = value == 0
 	cpu.halfCarry = (value & 0xF) == 0xF
+	cpu.programCounter++
+}
+
+// decrp - Decrement the value stored in the register pair
+func decrp(cpu *CPU) {
+	target := (cpu.currentInstruction() >> 4) & 0x3
+	value := uint16(0)
+	// The existing GetRegisterPair () function calls getAF() for case 0x3
+	// so let's unfold the function here
+	switch target {
+	case 0x0:
+		value = cpu.getBC()
+	case 0x1:
+		value = cpu.getDE()
+	case 0x2:
+		value = cpu.getHL()
+	case 0x3:
+		value = cpu.stackPointer
+	}
+	value--
+	cpu.SetRegisterPair(value)
 	cpu.programCounter++
 }
 
@@ -541,6 +766,11 @@ func jrcc(cpu *CPU) {
 	}
 }
 
+// jphl - jump to address in (hl)
+func jphl(cpu *CPU) {
+	cpu.programCounter = cpu.getHL()
+}
+
 // jpnn - jumps to the specified address
 func jpnn(cpu *CPU) {
 	cpu.programCounter = cpu.immediate16()
@@ -598,11 +828,30 @@ func ldann(cpu *CPU) {
 	cpu.programCounter += 3
 }
 
+// ldDEA - Load A into (DE)
+func ldDEA(cpu *CPU) {
+	address := cpu.getDE()
+	cpu.cart.write8(address, cpu.ra)
+	cpu.programCounter++
+}
+
 // ldHLr - Load the contents of register r into (HL)
 func ldHLr(cpu *CPU) {
 	value := cpu.GetRegisterValue(cpu.currentInstruction() & 0x7)
 	cpu.SetMemoryReference(value)
 	cpu.programCounter++
+}
+
+// ldhlspn - Load SP+n into HL
+func ldhlspn(cpu *CPU) {
+	n := cpu.immediate8()
+	spLower := uint8(cpu.stackPointer & 0xFF)
+	cpu.Add(n, spLower, 0) // Set the carry/half flags, but discard the result
+	cpu.zero = false
+	cpu.subtract = false
+	result := cpu.stackPointer + uint16(n)
+	cpu.setHL(result)
+	cpu.programCounter += 2
 }
 
 // ldhna - Loads register A into memory 0xFF00+n
@@ -653,6 +902,12 @@ func ldnnsp(cpu *CPU) {
 	cpu.programCounter += 3
 }
 
+// ldsphl - Loads HL into the stack pointer
+func ldsphl(cpu *CPU) {
+	cpu.stackPointer = cpu.getHL()
+	cpu.programCounter++
+}
+
 // nop - do nothing
 func nop(cpu *CPU) {
 	cpu.programCounter++
@@ -668,6 +923,16 @@ func or(cpu *CPU) {
 	cpu.carry = false
 
 	cpu.programCounter++
+}
+
+// ori - logical or of A with the immediate value
+func ori(cpu *CPU) {
+	cpu.ra = cpu.ra | cpu.immediate8()
+	cpu.zero = cpu.ra == 0x0
+	cpu.subtract = false
+	cpu.halfCarry = false
+	cpu.carry = false
+	cpu.programCounter += 2
 }
 
 // pop - moves a value off the top of the stack and into the designated register
@@ -704,10 +969,29 @@ func push(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// res - resets the n-th bit of the specified register
+func res(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	registerValue := cpu.GetRegisterValue(register)
+	targetBit := (cpu.currentInstruction() >> 3) & 0x7
+	cpu.SetRegister(register, registerValue & ^(0x1<<targetBit))
+	// no flags are affected by this operation
+	cpu.programCounter++
+}
+
 // ret - sets the programCounter to the value currently on the stack
 func ret(cpu *CPU) {
 	cpu.programCounter = cpu.cart.read16(cpu.stackPointer)
 	cpu.stackPointer += 2
+}
+
+// retcc - return if the given condition is true, otherwise don't
+func retcc(cpu *CPU) {
+	if cpu.CheckCondition() {
+		ret(cpu)
+	} else {
+		cpu.programCounter += 3
+	}
 }
 
 // rra - rotate the accumulator through the carry flag
@@ -752,10 +1036,51 @@ func rrn(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// sbc - Subtract the given register's value from A with the carry bit
+func sbc(cpu *CPU) {
+	value := cpu.GetRegisterValue(cpu.currentInstruction() & 0x7)
+	if cpu.carry {
+		cpu.ra = cpu.Sub(cpu.ra, value, 1)
+	} else {
+		cpu.ra = cpu.Sub(cpu.ra, value, 0)
+	}
+	cpu.programCounter++
+}
+
+// sbcd8 - Subtract the immediate value AND the carry bit from A
+func sbcd8(cpu *CPU) {
+	value := cpu.immediate8()
+	if cpu.carry {
+		cpu.ra = cpu.Sub(cpu.ra, value, 1)
+	} else {
+		cpu.ra = cpu.Sub(cpu.ra, value, 0)
+	}
+	cpu.programCounter += 2
+}
+
+// scf - Set the carry flag
+func scf(cpu *CPU) {
+	cpu.carry = true
+	//cpu.zero - not affected
+	cpu.subtract = false
+	cpu.halfCarry = false
+	cpu.programCounter++
+}
+
 // sbi - Subtracts the immediate value from A and then stores it into A
 func sbi(cpu *CPU) {
 	cpu.ra = cpu.Sub(cpu.ra, cpu.immediate8(), 0)
 	cpu.programCounter += 2
+}
+
+// set - sets the n-th bit of the specified register
+func set(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	registerValue := cpu.GetRegisterValue(register)
+	targetBit := (cpu.currentInstruction() >> 3) & 0x7
+	cpu.SetRegister(register, registerValue|(0x1<<targetBit))
+	// no flags are affected by this operation
+	cpu.programCounter++
 }
 
 // srl - shift the given register 1 bit to the right. the least significant
@@ -773,6 +1098,27 @@ func srl(cpu *CPU) {
 	cpu.subtract = false
 	cpu.halfCarry = false
 	cpu.SetRegister(register, value)
+	cpu.programCounter++
+}
+
+// sub - Performs A - given register
+func sub(cpu *CPU) {
+	value := cpu.GetRegisterValue(cpu.currentInstruction() & 0x7)
+	cpu.ra = cpu.Sub(cpu.ra, value, 0)
+	cpu.programCounter++
+}
+
+// swap - Swaps the upper & lower nibbles of the given register
+func swap(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+	lower := value & 0xF
+	value = (value >> 4) | (lower << 4)
+	cpu.SetRegister(register, value)
+	cpu.zero = value == 0x0
+	cpu.subtract = false
+	cpu.halfCarry = false
+	cpu.carry = false
 	cpu.programCounter++
 }
 
@@ -799,7 +1145,13 @@ func xord8(cpu *CPU) {
 }
 
 func unimplemented(cpu *CPU) {
-	panic("This instruction is not implemented")
+	errStr := fmt.Sprintf("Instruction [%X] is not yet implemented", cpu.currentInstruction())
+	panic(errStr)
+}
+
+func unimplementedExtended(cpu *CPU) {
+	errStr := fmt.Sprintf("Extended Instruction [CB %X] is not yet implemented", cpu.currentInstruction())
+	panic(errStr)
 }
 
 func (cpu *CPU) step() {
