@@ -575,9 +575,9 @@ func addspn(cpu *CPU) {
 	n := cpu.immediate8()
 	spLower := uint8(cpu.stackPointer & 0xFF)
 	cpu.Add(n, spLower, 0) // Set the carry/half flags, but discard the result
-	cpu.zero = false
-	cpu.subtract = false
-	cpu.stackPointer += uint16(n)
+	cpu.zero = false       // reset zero
+	cpu.subtract = false   // reset subtract
+	cpu.stackPointer += uint16(int8(n))
 	cpu.programCounter += 2
 }
 
@@ -718,7 +718,9 @@ func di(cpu *CPU) {
 // inc - Increments the value stored in the given register (or memory location)
 func inc(cpu *CPU) {
 	register := (cpu.currentInstruction() >> 3) & 0x7
+	oldCarry := cpu.carry
 	result := cpu.Add(cpu.GetRegisterValue(register), 1, 0)
+	cpu.carry = oldCarry // Carry is not affected by this op
 	cpu.SetRegister(register, result)
 	cpu.programCounter++
 }
@@ -849,7 +851,7 @@ func ldhlspn(cpu *CPU) {
 	cpu.Add(n, spLower, 0) // Set the carry/half flags, but discard the result
 	cpu.zero = false
 	cpu.subtract = false
-	result := cpu.stackPointer + uint16(n)
+	result := cpu.stackPointer + uint16(int8(n))
 	cpu.setHL(result)
 	cpu.programCounter += 2
 }
