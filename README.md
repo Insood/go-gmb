@@ -14,6 +14,6 @@ Built in GO with lots of help from the following resources:
 
 Blargg's cpu_instr test rom status:
 
-  Test |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10
-   --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- 
-Status |  F  |  F  |  P  |  P  |  P  |  P  |  F  |  F  |  F  |  P
+  Test |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  | 11 
+   --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+Status |  F  |  F  |  P  |  P  |  P  |  P  |  F  |  F  |  P  |  P  |  F

@@ -260,12 +260,16 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0xD5] = Instruction{"PUSH DE", 1, push, 16}
 	cpu.mainInstructions[0xE5] = Instruction{"PUSH HL", 1, push, 16}
 	cpu.mainInstructions[0xF5] = Instruction{"PUSH AF", 1, push, 16}
-	cpu.mainInstructions[0x1F] = Instruction{"RRA", 1, rra, 4}
 	cpu.mainInstructions[0xC9] = Instruction{"RET", 1, ret, 16}
 	cpu.mainInstructions[0xC0] = Instruction{"RET NZ", 3, retcc, 8}
 	cpu.mainInstructions[0xC8] = Instruction{"RET Z", 3, retcc, 8}
 	cpu.mainInstructions[0xD0] = Instruction{"RET NC", 3, retcc, 8}
 	cpu.mainInstructions[0xD8] = Instruction{"RET C", 3, retcc, 8}
+
+	cpu.mainInstructions[0x17] = Instruction{"RLA", 1, rla, 4}
+	cpu.mainInstructions[0x07] = Instruction{"RLCA", 1, rlca, 4}
+	cpu.mainInstructions[0x1F] = Instruction{"RRA", 1, rra, 4}
+	cpu.mainInstructions[0x0F] = Instruction{"RRCA", 1, rrca, 4}
 
 	cpu.mainInstructions[0x9F] = Instruction{"SBC A, A", 1, sbc, 4}
 	cpu.mainInstructions[0x98] = Instruction{"SBC A, B", 1, sbc, 4}
@@ -300,6 +304,33 @@ func (cpu *CPU) initializeMainInstructionSet() {
 }
 
 func (cpu *CPU) initializeExtendedInstructionSet() {
+	cpu.extendedInstructions[0x07] = Instruction{"RLC A", 1, rlc, 8}
+	cpu.extendedInstructions[0x00] = Instruction{"RLC B", 1, rlc, 8}
+	cpu.extendedInstructions[0x01] = Instruction{"RLC C", 1, rlc, 8}
+	cpu.extendedInstructions[0x02] = Instruction{"RLC D", 1, rlc, 8}
+	cpu.extendedInstructions[0x03] = Instruction{"RLC E", 1, rlc, 8}
+	cpu.extendedInstructions[0x04] = Instruction{"RLC H", 1, rlc, 8}
+	cpu.extendedInstructions[0x05] = Instruction{"RLC L", 1, rlc, 8}
+	cpu.extendedInstructions[0x06] = Instruction{"RLC (HL)", 1, rlc, 16}
+
+	cpu.extendedInstructions[0x0F] = Instruction{"RRC A", 1, rrc, 8}
+	cpu.extendedInstructions[0x08] = Instruction{"RRC B", 1, rrc, 8}
+	cpu.extendedInstructions[0x09] = Instruction{"RRC C", 1, rrc, 8}
+	cpu.extendedInstructions[0x0A] = Instruction{"RRC D", 1, rrc, 8}
+	cpu.extendedInstructions[0x0B] = Instruction{"RRC E", 1, rrc, 8}
+	cpu.extendedInstructions[0x0C] = Instruction{"RRC H", 1, rrc, 8}
+	cpu.extendedInstructions[0x0D] = Instruction{"RRC L", 1, rrc, 8}
+	cpu.extendedInstructions[0x0E] = Instruction{"RRC (HL)", 1, rrc, 16}
+
+	cpu.extendedInstructions[0x17] = Instruction{"RL A", 1, rl, 8}
+	cpu.extendedInstructions[0x10] = Instruction{"RL B", 1, rl, 8}
+	cpu.extendedInstructions[0x11] = Instruction{"RL C", 1, rl, 8}
+	cpu.extendedInstructions[0x12] = Instruction{"RL D", 1, rl, 8}
+	cpu.extendedInstructions[0x13] = Instruction{"RL E", 1, rl, 8}
+	cpu.extendedInstructions[0x14] = Instruction{"RL H", 1, rl, 8}
+	cpu.extendedInstructions[0x15] = Instruction{"RL L", 1, rl, 8}
+	cpu.extendedInstructions[0x16] = Instruction{"RL (HL)", 1, rl, 16}
+
 	cpu.extendedInstructions[0x1F] = Instruction{"RRN A", 1, rrn, 8}
 	cpu.extendedInstructions[0x18] = Instruction{"RRN B", 1, rrn, 8}
 	cpu.extendedInstructions[0x19] = Instruction{"RRN C", 1, rrn, 8}
@@ -308,6 +339,24 @@ func (cpu *CPU) initializeExtendedInstructionSet() {
 	cpu.extendedInstructions[0x1C] = Instruction{"RRN H", 1, rrn, 8}
 	cpu.extendedInstructions[0x1D] = Instruction{"RRN L", 1, rrn, 8}
 	cpu.extendedInstructions[0x1E] = Instruction{"RRN (HL)", 1, rrn, 16}
+
+	cpu.extendedInstructions[0x27] = Instruction{"SLA A", 1, sla, 8}
+	cpu.extendedInstructions[0x20] = Instruction{"SLA B", 1, sla, 8}
+	cpu.extendedInstructions[0x21] = Instruction{"SLA C", 1, sla, 8}
+	cpu.extendedInstructions[0x22] = Instruction{"SLA D", 1, sla, 8}
+	cpu.extendedInstructions[0x23] = Instruction{"SLA E", 1, sla, 8}
+	cpu.extendedInstructions[0x24] = Instruction{"SLA H", 1, sla, 8}
+	cpu.extendedInstructions[0x25] = Instruction{"SLA L", 1, sla, 8}
+	cpu.extendedInstructions[0x26] = Instruction{"SLA (HL)", 1, sla, 16}
+
+	cpu.extendedInstructions[0x2F] = Instruction{"SRA A", 1, sra, 8}
+	cpu.extendedInstructions[0x28] = Instruction{"SRA B", 1, sra, 8}
+	cpu.extendedInstructions[0x29] = Instruction{"SRA C", 1, sra, 8}
+	cpu.extendedInstructions[0x2A] = Instruction{"SRA D", 1, sra, 8}
+	cpu.extendedInstructions[0x2B] = Instruction{"SRA E", 1, sra, 8}
+	cpu.extendedInstructions[0x2C] = Instruction{"SRA H", 1, sra, 8}
+	cpu.extendedInstructions[0x2D] = Instruction{"SRA L", 1, sra, 8}
+	cpu.extendedInstructions[0x2E] = Instruction{"SRA (HL)", 1, sra, 16}
 
 	cpu.extendedInstructions[0x3F] = Instruction{"SRL A", 1, srl, 8}
 	cpu.extendedInstructions[0x38] = Instruction{"SRL B", 1, srl, 8}
@@ -996,6 +1045,86 @@ func retcc(cpu *CPU) {
 	}
 }
 
+// rl - Rotate N left through carry flag
+func rl(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+
+	bit7 := value >> 7
+	value = (value << 1)
+	if cpu.carry {
+		value = value | 0x1
+	}
+
+	cpu.subtract = false
+	cpu.halfCarry = false
+	cpu.zero = value == 0
+	if bit7 != 0 {
+		cpu.carry = true
+	} else {
+		cpu.carry = false
+	}
+
+	cpu.programCounter++
+	cpu.SetRegister(register, value)
+}
+
+// rla - Rotate A left through carry
+func rla(cpu *CPU) {
+	bit7 := cpu.ra >> 7
+	cpu.ra = cpu.ra << 1
+	if cpu.carry {
+		cpu.ra = cpu.ra | 0x1
+	}
+	cpu.carry = false
+	if bit7 != 0 {
+		cpu.carry = true
+	}
+	cpu.subtract = false
+	cpu.halfCarry = false
+	// Gameboy CPU Manual specifies that the Zero flag is set if the result
+	// is zero, but this causes Blargg's ROM to fail
+	cpu.zero = false
+	cpu.programCounter++
+}
+
+// rlc - Rotates the given register 1 left, old bit 7 to carry flag
+func rlc(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+
+	bit7 := value >> 7
+	value = (value << 1) | bit7
+
+	cpu.zero = (value == 0)
+	cpu.halfCarry = false
+	cpu.subtract = false
+	if bit7 != 0 {
+		cpu.carry = true
+	} else {
+		cpu.carry = false
+	}
+	cpu.SetRegister(register, value)
+	cpu.programCounter++
+}
+
+// rlca - Rotate A left, Old bit 7 to carry flag
+func rlca(cpu *CPU) {
+	bit7 := cpu.ra >> 7
+	cpu.ra = (cpu.ra << 1) | bit7 // Rotate bit 7 to bit 0
+	// Gameboy CPU Manual specifies that the Zero flag is set if the result
+	// is zero, but this causes Blargg's ROM to fail
+	cpu.zero = false
+	cpu.halfCarry = false
+	cpu.subtract = false
+	if bit7 == 0 {
+		cpu.carry = false
+	} else {
+		cpu.carry = true
+	}
+	cpu.programCounter++
+}
+
 // rra - rotate the accumulator through the carry flag
 // the carry flag contents are copied to bit 7
 // this is the same instruction as CB 1F apparently
@@ -1010,9 +1139,48 @@ func rra(cpu *CPU) {
 	if oldCarry {
 		cpu.ra = cpu.ra | 0x80
 	}
-	cpu.zero = cpu.ra == 0x0
+	// Gameboy CPU Manual specifies that the Zero flag is set if the result
+	// is zero, but this causes Blargg's ROM to fail
+	cpu.zero = false
 	cpu.subtract = false
 	cpu.halfCarry = false
+	cpu.programCounter++
+}
+
+// rrc - Rotate n right, old bit 0 to carry flag
+func rrc(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+	bit0 := value & 0x1
+	value = (value >> 1) | (bit0 << 7)
+
+	cpu.halfCarry = false
+	cpu.subtract = false
+	cpu.zero = value == 0
+	if bit0 == 0 {
+		cpu.carry = false
+	} else {
+		cpu.carry = true
+	}
+
+	cpu.SetRegister(register, value)
+	cpu.programCounter++
+}
+
+// rrca - rotate A right and send the old bit 0 to carry
+func rrca(cpu *CPU) {
+	bit0 := cpu.ra & 0x1
+	cpu.ra = (cpu.ra >> 1) | (bit0 << 7)
+	if bit0 == 0 {
+		cpu.carry = false
+	} else {
+		cpu.carry = true
+	}
+	cpu.subtract = false
+	cpu.halfCarry = false
+	// Gameboy CPU Manual specifies that the Zero flag is set if the result
+	// is zero, but this causes Blargg's ROM to fail
+	cpu.zero = false
 	cpu.programCounter++
 }
 
@@ -1082,6 +1250,44 @@ func set(cpu *CPU) {
 	targetBit := (cpu.currentInstruction() >> 3) & 0x7
 	cpu.SetRegister(register, registerValue|(0x1<<targetBit))
 	// no flags are affected by this operation
+	cpu.programCounter++
+}
+
+// sla - Shift N left into carry, LSB of n set to 0
+func sla(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+	bit7 := value >> 7
+	value = value << 1
+	if bit7 != 0 {
+		cpu.carry = true
+	} else {
+		cpu.carry = false
+	}
+	cpu.zero = value == 0
+	cpu.halfCarry = false
+	cpu.subtract = false
+	cpu.SetRegister(register, value)
+	cpu.programCounter++
+}
+
+// sra - Shift n right into carry, MSB does not change
+func sra(cpu *CPU) {
+	register := cpu.currentInstruction() & 0x7
+	value := cpu.GetRegisterValue(register)
+	bit0 := value & 0x1
+	bit7 := value & 0x80
+	value = (value >> 1) | bit7
+
+	cpu.zero = value == 0
+	cpu.halfCarry = false
+	cpu.subtract = false
+	if bit0 != 0 {
+		cpu.carry = true
+	} else {
+		cpu.carry = false
+	}
+	cpu.SetRegister(register, value)
 	cpu.programCounter++
 }
 
