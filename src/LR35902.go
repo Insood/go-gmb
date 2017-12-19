@@ -601,7 +601,7 @@ func and(cpu *CPU) {
 // ani - performs a logical AND of A with the immediate value
 func ani(cpu *CPU) {
 	result := cpu.immediate8() & cpu.ra
-
+	cpu.ra = result
 	cpu.halfCarry = true
 	cpu.carry = false
 	cpu.subtract = false

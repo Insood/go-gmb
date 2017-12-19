@@ -12,5 +12,8 @@ Built in GO with lots of help from the following resources:
 4) Instruction encoding: http://www.classiccmp.org/dunfield/r/8080.txt
 5) Test ROMs: https://github.com/retrio/gb-test-roms/
 
-Known Issues:
-1) Doesn't do anything yet
+Blargg's cpu_instr test rom status:
+
+  Test |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10
+   --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- 
+Status |  F  |  F  |  P  |  P  |  P  |  P  |  F  |  F  |  F  |  P
