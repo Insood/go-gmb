@@ -236,6 +236,7 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x1A] = Instruction{"LD A, (DE)", 1, ldade, 8}
 	cpu.mainInstructions[0xF0] = Instruction{"LD A, ($FF00+n)", 2, ldhan, 12}
 
+	cpu.mainInstructions[0xF2] = Instruction{"LD A, (C)", 1, ldAC, 8}
 	cpu.mainInstructions[0xE2] = Instruction{"LD (C), A", 1, ldCA, 8}
 
 	cpu.mainInstructions[0xE0] = Instruction{"LDH (n),A", 2, ldhna, 12}
@@ -871,9 +872,16 @@ func jpnn(cpu *CPU) {
 	cpu.programCounter = cpu.immediate16()
 }
 
-// Loads the value of register A to the address 0xFF00+C
+// ldAC - Load the value in 0xFF00+C into A
+func ldAC(cpu *CPU) {
+	address := uint16(0xFF00) + uint16(cpu.rc)
+	cpu.ra = cpu.cart.read8(address)
+	cpu.programCounter++
+}
+
+// lcCA - Loads the value of register A to the address 0xFF00+C
 func ldCA(cpu *CPU) {
-	address := uint16(0xFF00) + uint16(cpu.ra)
+	address := uint16(0xFF00) + uint16(cpu.rc)
 	cpu.cart.write8(address, cpu.ra)
 	cpu.programCounter++
 }
