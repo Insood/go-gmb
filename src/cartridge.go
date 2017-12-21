@@ -29,7 +29,8 @@ func (cart *Cartridge) read16(address uint16) uint16 {
 func (cart *Cartridge) write8(address uint16, data uint8) {
 	cart.memory[address] = data
 	if address == 0xFF01 { // Writing to the serial port; used by the test ROM to give output
-		fmt.Printf("[%X] %c", data, data)
+		//fmt.Printf("[%X] %c", data, data)
+		fmt.Printf("%c", data) // Now printing debug messages properly
 	}
 }
 

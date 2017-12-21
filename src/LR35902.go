@@ -103,6 +103,8 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0xFE] = Instruction{"CP d8", 2, cpi, 8}
 	cpu.mainInstructions[0x2F] = Instruction{"CPL", 1, cpl, 4}
 
+	cpu.mainInstructions[0x27] = Instruction{"DAA", 1, daa, 4}
+
 	cpu.mainInstructions[0x3D] = Instruction{"DEC A", 1, dec, 4}
 	cpu.mainInstructions[0x05] = Instruction{"DEC B", 1, dec, 4}
 	cpu.mainInstructions[0x0D] = Instruction{"DEC C", 1, dec, 4}
@@ -143,8 +145,10 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x21] = Instruction{"LD HL, d16", 3, ld16, 12}
 	cpu.mainInstructions[0x31] = Instruction{"LD SP, d16", 3, ld16, 12}
 	cpu.mainInstructions[0x32] = Instruction{"LD (HL-), A", 1, lddHLA, 8}
+	cpu.mainInstructions[0x3A] = Instruction{"LD A, (HL-)", 1, lddAHL, 8}
 	cpu.mainInstructions[0x2A] = Instruction{"LD A, (HL+)", 1, ldiAHL, 8}
 	cpu.mainInstructions[0x22] = Instruction{"LD (HL+), A", 1, ldiHLA, 8}
+	cpu.mainInstructions[0x02] = Instruction{"LD (BC), A", 1, ldBCA, 8}
 	cpu.mainInstructions[0x12] = Instruction{"LD (DE), A", 1, ldDEA, 8}
 	cpu.mainInstructions[0x70] = Instruction{"LD (HL) B", 1, ldHLr, 8}
 	cpu.mainInstructions[0x71] = Instruction{"LD (HL) C", 1, ldHLr, 8}
@@ -227,8 +231,9 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x7D] = Instruction{"LD A, L", 1, ldrr, 4}
 	cpu.mainInstructions[0x7E] = Instruction{"LD A, (HL)", 1, ldrr, 8}
 	cpu.mainInstructions[0x7F] = Instruction{"LD A, A", 1, ldrr, 4}
+	cpu.mainInstructions[0x0A] = Instruction{"LD A, (BC)", 1, ldabc, 8}
 	cpu.mainInstructions[0xFA] = Instruction{"LD A, (nn)", 3, ldann, 16}
-	cpu.mainInstructions[0x1A] = Instruction{"LD A, (de)", 1, ldade, 8}
+	cpu.mainInstructions[0x1A] = Instruction{"LD A, (DE)", 1, ldade, 8}
 	cpu.mainInstructions[0xF0] = Instruction{"LD A, ($FF00+n)", 2, ldhan, 12}
 
 	cpu.mainInstructions[0xE2] = Instruction{"LD (C), A", 1, ldCA, 8}
@@ -724,6 +729,45 @@ func cpn(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// DAA - decimal adjust register A
+func daa(cpu *CPU) {
+	a16 := int16(cpu.ra)
+
+	if !cpu.subtract { // doing an addition
+		// If the 4LSB of RA are more than 9 or
+		// if the aux carry bit is set, increment by 6
+		if (a16&0xF) > 9 || cpu.halfCarry {
+			a16 += 0x06
+		}
+
+		// If the 4MSB of the result are more than 9 or the
+		// carry bit is set, increment by 0x60
+		if a16 > 0x9F || cpu.carry {
+			a16 += 0x60
+		}
+	} else { // doing a subtraction
+		if cpu.halfCarry {
+			a16 -= 6
+			if !cpu.carry {
+				a16 &= 0xFF
+			}
+		}
+		if cpu.carry {
+			a16 -= 0x60
+		}
+	}
+
+	if a16 > 0x100 {
+		cpu.carry = true
+	}
+	cpu.ra = uint8(a16)
+	cpu.zero = cpu.ra == 0
+	cpu.halfCarry = false
+	// cpu.subtract = subtract - unaffected
+
+	cpu.programCounter++
+}
+
 // dec - decrement the given register by 1 and set some flags
 func dec(cpu *CPU) {
 	register := (cpu.currentInstruction() >> 3) & 0x7
@@ -865,6 +909,12 @@ func ld16(cpu *CPU) {
 	cpu.programCounter += 3
 }
 
+// ldabc - Loads (bc) into a
+func ldabc(cpu *CPU) {
+	cpu.ra = cpu.cart.read8(cpu.getBC())
+	cpu.programCounter++
+}
+
 // ldade - Loads (de) into a
 func ldade(cpu *CPU) {
 	cpu.ra = cpu.cart.read8(cpu.getDE())
@@ -877,6 +927,13 @@ func ldann(cpu *CPU) {
 	value := cpu.cart.read8(address)
 	cpu.ra = value
 	cpu.programCounter += 3
+}
+
+//ldBCA - Load A into (BC)
+func ldBCA(cpu *CPU) {
+	address := cpu.getBC()
+	cpu.cart.write8(address, cpu.ra)
+	cpu.programCounter++
 }
 
 // ldDEA - Load A into (DE)
@@ -926,6 +983,15 @@ func ldiHLA(cpu *CPU) {
 	address := cpu.getHL()
 	cpu.cart.write8(address, cpu.ra)
 	address++
+	cpu.setHL(address)
+	cpu.programCounter++
+}
+
+// lddAHL - Put (HL) into A, then decrement HL
+func lddAHL(cpu *CPU) {
+	address := cpu.getHL()
+	cpu.ra = cpu.cart.read8(address)
+	address--
 	cpu.setHL(address)
 	cpu.programCounter++
 }
