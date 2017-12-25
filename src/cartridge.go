@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
-
-	"github.com/hajimehoshi/ebiten/ebitenutil"
+	"os"
+	//"github.com/hajimehoshi/ebiten/ebitenutil"
 )
 
 // Cartridge - exposes a read/write interface to a cartridge memory bank
@@ -46,7 +46,8 @@ func (cart *Cartridge) write16(address uint16, data uint16) {
 // and returns a Cartridge instance that can then be read from/written to
 // TODO: Only supports 32KB ROMs (ie: tetris). Implement MBC Type 1+ cartridges
 func loadCart(romName string) *Cartridge {
-	fi, err := ebitenutil.OpenFile(romName)
+	//fi, err := ebitenutil.OpenFile(romName)
+	fi, err := os.Open(romName)
 	if err != nil {
 		fmt.Println(romName, "is an invalid file. Could not open.")
 		panic(err)

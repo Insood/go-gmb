@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // Instruction - a struct which encapsulates a function pointer and also some information
 // about the CPU instruction
@@ -118,6 +121,7 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x2B] = Instruction{"DEC HL", 1, decrp, 8}
 	cpu.mainInstructions[0x3B] = Instruction{"DEC SP", 1, decrp, 8}
 	cpu.mainInstructions[0xF3] = Instruction{"DI", 1, di, 4}
+	cpu.mainInstructions[0xFB] = Instruction{"EI",1, ei, 4}
 
 	cpu.mainInstructions[0x3C] = Instruction{"INC A", 1, inc, 4}
 	cpu.mainInstructions[0x04] = Instruction{"INC B", 1, inc, 4}
@@ -132,6 +136,11 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0x13] = Instruction{"INC DE", 1, incrp, 8}
 	cpu.mainInstructions[0x23] = Instruction{"INC HL", 1, incrp, 8}
 	cpu.mainInstructions[0x33] = Instruction{"INC SP", 1, incrp, 8}
+	
+	cpu.mainInstructions[0xC2] = Instruction{"JP NZ", 3, jpcc, 16}
+	cpu.mainInstructions[0xD2] = Instruction{"JP NC", 3, jpcc, 16}
+	cpu.mainInstructions[0xCA] = Instruction{"JP Z", 3, jpcc, 16}
+	cpu.mainInstructions[0xDA] = Instruction{"JP C", 3, jpcc, 16}
 	cpu.mainInstructions[0xE9] = Instruction{"JP (HL)", 1, jphl, 4}
 	cpu.mainInstructions[0xC3] = Instruction{"JP nn", 3, jpnn, 12}
 	cpu.mainInstructions[0x18] = Instruction{"JR", 2, jr, 8}
@@ -267,16 +276,25 @@ func (cpu *CPU) initializeMainInstructionSet() {
 	cpu.mainInstructions[0xE5] = Instruction{"PUSH HL", 1, push, 16}
 	cpu.mainInstructions[0xF5] = Instruction{"PUSH AF", 1, push, 16}
 	cpu.mainInstructions[0xC9] = Instruction{"RET", 1, ret, 16}
-	cpu.mainInstructions[0xC0] = Instruction{"RET NZ", 3, retcc, 8}
-	cpu.mainInstructions[0xC8] = Instruction{"RET Z", 3, retcc, 8}
-	cpu.mainInstructions[0xD0] = Instruction{"RET NC", 3, retcc, 8}
-	cpu.mainInstructions[0xD8] = Instruction{"RET C", 3, retcc, 8}
-
+	cpu.mainInstructions[0xC0] = Instruction{"RET NZ", 1, retcc, 8}
+	cpu.mainInstructions[0xC8] = Instruction{"RET Z", 1, retcc, 8}
+	cpu.mainInstructions[0xD0] = Instruction{"RET NC", 1, retcc, 8}
+	cpu.mainInstructions[0xD8] = Instruction{"RET C", 1, retcc, 8}
+	cpu.mainInstructions[0xD9] = Instruction{"RETI", 1, reti, 8}
+	
 	cpu.mainInstructions[0x17] = Instruction{"RLA", 1, rla, 4}
 	cpu.mainInstructions[0x07] = Instruction{"RLCA", 1, rlca, 4}
 	cpu.mainInstructions[0x1F] = Instruction{"RRA", 1, rra, 4}
 	cpu.mainInstructions[0x0F] = Instruction{"RRCA", 1, rrca, 4}
 
+	cpu.mainInstructions[0xC7] = Instruction{"RST 00", 1, rst, 32}
+	cpu.mainInstructions[0xCF] = Instruction{"RST 08", 1, rst, 32}
+	cpu.mainInstructions[0xD7] = Instruction{"RST 10", 1, rst, 32}
+	cpu.mainInstructions[0xDF] = Instruction{"RST 18", 1, rst, 32}
+	cpu.mainInstructions[0xE7] = Instruction{"RST 20", 1, rst, 32}
+	cpu.mainInstructions[0xEF] = Instruction{"RST 28", 1, rst, 32}
+	cpu.mainInstructions[0xF7] = Instruction{"RST 30", 1, rst, 32}
+	cpu.mainInstructions[0xFF] = Instruction{"RST 38", 1, rst, 32}
 	cpu.mainInstructions[0x9F] = Instruction{"SBC A, A", 1, sbc, 4}
 	cpu.mainInstructions[0x98] = Instruction{"SBC A, B", 1, sbc, 4}
 	cpu.mainInstructions[0x99] = Instruction{"SBC A, C", 1, sbc, 4}
@@ -809,6 +827,12 @@ func di(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// ei - enable interrupts
+func ei(cpu * CPU){
+	cpu.inte = true
+	cpu.programCounter++
+}
+
 // inc - Increments the value stored in the given register (or memory location)
 func inc(cpu *CPU) {
 	register := (cpu.currentInstruction() >> 3) & 0x7
@@ -840,6 +864,16 @@ func incrp(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// jpcc - if the specified condition is true, then perform a jump
+// to the specified address
+func jpcc(cpu * CPU){
+	if cpu.CheckCondition() {
+		cpu.programCounter = cpu.immediate16()
+	} else {
+		cpu.programCounter += 3
+	}
+}
+
 // jr - jumps relative to the current program counter based on the byte of
 // immediate data provided
 // NOTE: The immediate byte is a SIGNED value meaning that jumps from
@@ -857,6 +891,10 @@ func jrcc(cpu *CPU) {
 	if cpu.CheckCondition() {
 		// The jump address is relative to the end of the 2-byte opcode
 		cpu.programCounter = cpu.programCounter + 2 + uint16(int8(cpu.immediate8()))
+		if int8( cpu.immediate8() )== -2 {
+			fmt.Printf("Infinite JR detected")
+			os.Exit(-1);
+		}	
 	} else {
 		cpu.programCounter += 2
 	}
@@ -1115,8 +1153,14 @@ func retcc(cpu *CPU) {
 	if cpu.CheckCondition() {
 		ret(cpu)
 	} else {
-		cpu.programCounter += 3
+		cpu.programCounter++
 	}
+}
+
+// reti - returns from interrupt and enables interrupts
+func reti(cpu *CPU){
+	ret(cpu)
+	cpu.inte = true
 }
 
 // rl - Rotate N left through carry flag
@@ -1280,6 +1324,15 @@ func rrn(cpu *CPU) {
 	cpu.programCounter++
 }
 
+// rst - push address on stack and then jump to address embeded in instruction
+func rst(cpu *CPU){
+	cpu.stackPointer -=2
+	cpu.cart.write16(cpu.stackPointer, cpu.programCounter+1)
+	
+	address := (cpu.currentInstruction() >> 3) & 0x7
+	cpu.programCounter = uint16(address << 3)
+}
+
 // sbc - Subtract the given register's value from A with the carry bit
 func sbc(cpu *CPU) {
 	value := cpu.GetRegisterValue(cpu.currentInstruction() & 0x7)
@@ -1439,6 +1492,7 @@ func unimplementedExtended(cpu *CPU) {
 func (cpu *CPU) step() {
 	instruction := cpu.currentInstruction()
 	instructionInfo := Instruction{}
+
 	if instruction != 0xCB {
 		instructionInfo = cpu.mainInstructions[instruction]
 	} else {
