@@ -749,41 +749,30 @@ func cpn(cpu *CPU) {
 }
 
 // DAA - decimal adjust register A
+// Shamelessly implemented based on the notes here: https://ehaskins.com/2018-01-30%20Z80%20DAA/
 func daa(cpu *CPU) {
+	correction := int16(0)
+
+	if(cpu.halfCarry || (!cpu.subtract && (cpu.ra & 0xF) > 9)){
+		correction = 0x06;
+	}
+
+	// Checking to see if RA > 0x99 because a value of say.. 9A is invalid (technically 100 in BCD)
+	if(cpu.carry || (!cpu.subtract && cpu.ra > 0x99)){
+		correction |= 0x60;
+		cpu.carry = true;
+	}
+
 	a16 := int16(cpu.ra)
-
-	if !cpu.subtract { // doing an addition
-		// If the 4LSB of RA are more than 9 or
-		// if the aux carry bit is set, increment by 6
-		if (a16&0xF) > 9 || cpu.halfCarry {
-			a16 += 0x06
-		}
-
-		// If the 4MSB of the result are more than 9 or the
-		// carry bit is set, increment by 0x60
-		if a16 > 0x9F || cpu.carry {
-			a16 += 0x60
-		}
-	} else { // doing a subtraction
-		if cpu.halfCarry {
-			a16 -= 6
-			if !cpu.carry {
-				a16 &= 0xFF
-			}
-		}
-		if cpu.carry {
-			a16 -= 0x60
-		}
+	if (!cpu.subtract) {
+		a16 += correction
+	} else {
+		a16 -= correction
 	}
 
-	if a16 > 0x100 {
-		cpu.carry = true
-	}
 	cpu.ra = uint8(a16)
 	cpu.zero = cpu.ra == 0
-	cpu.halfCarry = false
-	// cpu.subtract = subtract - unaffected
-
+	cpu.halfCarry = false // Always reset
 	cpu.programCounter++
 }
 
