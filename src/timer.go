@@ -61,6 +61,7 @@ func (timer * Timer) update(cyclesPerformed int){
             timer.mmu.setTIMA(timer.mmu.getTMA())
             IF := timer.mmu.getIF()
             timer.mmu.setIF(IF | 0x4) // Enable bit 2 of the interrupt enable register
+            //fmt.Println("Triggering IF")
         } else {
             timer.mmu.setTIMA(tima)
         }

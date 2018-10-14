@@ -580,6 +580,10 @@ func (cpu *CPU) CheckCondition() bool {
 func (cpu *CPU) currentInstruction() uint8 {
     return cpu.mmu.read8(cpu.programCounter)
 }
+func (cpu *CPU) nextInstruction() uint8 {
+    return cpu.mmu.read8(cpu.programCounter+1)
+}
+
 func (cpu *CPU) immediate8() uint8 {
     return cpu.mmu.read8(cpu.programCounter + 1)
 }
@@ -832,9 +836,17 @@ func ei(cpu * CPU){
 // Only has an effect if interrupts have been enabled through EI
 // There is a bug with HALT that needs to be properly emulated if
 // if it is called with DI disabled
+// Lots of helpful information here: https://github.com/AntonioND/giibiiadvance/tree/master/docs
 func halt(cpu * CPU){
     if cpu.inte {
         cpu.halted = true
+    } else {
+        if (cpu.mmu.getIE() & cpu.mmu.getIF()) != 0 {
+            // CPU should fail to increase PC and also not clear IF flags
+            panic("Unhandled halt bug")
+        } else {
+            cpu.halted = true
+        }
     }
 }
 
@@ -1495,6 +1507,11 @@ func unimplementedExtended(cpu *CPU) {
 }
 
 func (cpu * CPU) interrupt(interrupt uint8, address uint16){
+    // Wake up the CPU if the CPU is in halted mode
+    if cpu.halted{ // verbose
+        cpu.halted = false
+    }
+
     cpu.inte = false; // Disable the interrupt flag. Have to call RETI or EI to re-enable
     cpu.stackPointer -= 2
     cpu.mmu.write16(cpu.stackPointer, cpu.programCounter)
@@ -1503,23 +1520,20 @@ func (cpu * CPU) interrupt(interrupt uint8, address uint16){
     cpu.mmu.write8(0xFF0F,newIF)
 }
 
+// checkForInterrupts
+// Check to see if an interrupt has occured (IF set from any source)
 func (cpu * CPU) checkForInterrupts(){
-    if(cpu.inte){ // Interrupts are enabled
-        interruptFlag := cpu.mmu.read8(0xFF0F)
-        
-        if interruptFlag == 0x0 {
-            // No interrupts set so nothing to do here
-            return 
-        }
+    interruptFlag := cpu.mmu.getIF()
+    interruptEnabledFlag := cpu.mmu.getIE() // Get enabled interrupts
 
-        // Okay, an interrupt has happened. Let's see if that specific interrupt
-        // is enabled
-        interruptEnabledFlag := cpu.mmu.getIE()
-        
-        // Also, wake up the CPU
-        // It is not 100% clear if the CPU should be awoken if interrupts are enabled, but no handlers are set
-        cpu.halted = false
+    if interruptFlag == 0x0 {
+        // No interrupts set so nothing to do here
+        return 
+    }
 
+    if(cpu.inte){
+        // Check to see if the interrupt handler associated with the interrupt is enabled.
+        // If it is, go run the interrupt service routine
         if ((interruptFlag & 0x1) > 0) && ((interruptEnabledFlag & 0x1) > 0){ // V-BLANK
             cpu.interrupt(0x1, 0x40)           
         } else if ((interruptFlag & 2) > 0) && ((interruptEnabledFlag & 0x2) > 0){ // LCDC
@@ -1531,14 +1545,40 @@ func (cpu * CPU) checkForInterrupts(){
         } else if ((interruptFlag & 16) > 0) && ((interruptEnabledFlag & 0x16) >0) { // Hi-Lo of P10-P13 (button input)
             cpu.interrupt(0x16, 0x60)
         }
+    } else {
+        // Special code for handling HALT that was called when interrupts are not enabled
+        // The interrupt will wake the CPU, but it will not be handled OR cleared
+        if cpu.halted {
+            if (interruptFlag & interruptEnabledFlag) != 0 {
+                cpu.halted = false
+                cpu.programCounter++
+            }
+        }
     }
 }
 
-func (cpu *CPU) step() {
+// prettyDebugOutputAboutCurrentInstruction - Does what it says on the tin
+func prettyDebugOutputAboutCurrentInstruction(cpu * CPU) {
     instruction := cpu.currentInstruction()
-    instructionInfo := Instruction{}
 
-    if !cpu.halted {
+    instructionInfo := Instruction{}
+    if instruction != 0xCB {
+        instructionInfo = cpu.mainInstructions[instruction]
+    } else {
+        instruction := cpu.nextInstruction()
+        instructionInfo = cpu.extendedInstructions[instruction]
+    }
+
+    debugPrint(cpu, instructionInfo.name, instructionInfo.dataSize)
+}
+
+func (cpu *CPU) step() {
+    prettyDebugOutputAboutCurrentInstruction(cpu)
+    
+    if !cpu.halted{
+        instruction := cpu.currentInstruction()
+        instructionInfo := Instruction{}
+
         if instruction != 0xCB {
             instructionInfo = cpu.mainInstructions[instruction]
         } else {
@@ -1547,13 +1587,16 @@ func (cpu *CPU) step() {
             instructionInfo = cpu.extendedInstructions[instruction]
         }
 
-        // The values affected by this instructrion will be shown before the next instruction is
-        // executed, but before the debugPrint output is shown
-        debugPrint(cpu, instructionInfo.name, instructionInfo.dataSize)
-        instructionInfo.function(cpu)
+        instructionInfo.function(cpu) // Execute the instruction
         cpu.instructionsExecuted++
+        cpu.timer.update(instructionInfo.cycles) // Update the timers (which may trigger interrupts)
+    } else {
+        // Special code to handle what to do if the CPU is halted
+        // During a halt, the CPU is executing 4 cycles every update
+        instructionInfo := cpu.mainInstructions[cpu.currentInstruction()]
+        cpu.timer.update(instructionInfo.cycles) 
     }
-
-    cpu.timer.update(instructionInfo.cycles)
+    
+    
     cpu.checkForInterrupts()
 }

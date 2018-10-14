@@ -13,13 +13,14 @@ Built in GO with lots of help from the following resources:
 5) Instruction encoding: http://www.classiccmp.org/dunfield/r/8080.txt
 6) Test ROMs: https://github.com/retrio/gb-test-roms/
 7) Opcode Summary: http://www.devrs.com/gb/files/opcodes.html
+8) Information about HALT: https://github.com/AntonioND/giibiiadvance/tree/master/docs
 
 
 Blargg's cpu_instr test rom status:
 
   Test |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  | 11 
    --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
-Status |  P  |  F  |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P
+Status |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P
 
 The unit tests have a common framework which require a bunch of instructions to be implemented ahead of time, but the list below is probably the order in which the unit tests can be attacked start to finish until they all pass.
 
