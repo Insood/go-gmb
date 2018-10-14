@@ -20,3 +20,17 @@ Blargg's cpu_instr test rom status:
   Test |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  | 10  | 11 
    --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
 Status |  P  |  F  |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P  |  P
+
+The unit tests have a common framework which require a bunch of instructions to be implemented ahead of time, but the list below is probably the order in which the unit tests can be attacked start to finish until they all pass.
+
+Easy   - 3 (Basic stack pointer operations)
+       - 6 (Basic 8-bit loads between registers)
+       - 5 (Basic register operations)
+       - 10 (Extended instructions; register bit setting)
+       - 7 (Jump, call, return)
+       - 8 (Push/Pop, 16-bit loads, high memory operations)
+       - 11 (Extended instructions)
+       - 4 (Immediate instructions: Load, Math, Bit-wise ops)
+       - 9 (Math operations on registers; More extended instructions)
+       - 01 (DAA)
+Hard   - 02 (Interrupts)
