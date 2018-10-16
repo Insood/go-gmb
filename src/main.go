@@ -4,6 +4,7 @@ import (
     "flag"
     "fmt"
     "os"
+    "github.com/hajimehoshi/ebiten"
 )
 
 // DEBUGMODE - Whether or not the program is running in debug mode (ie: pretty print opcodes)
@@ -55,24 +56,46 @@ func debugPrint(cpu *CPU, name string, values int) {
     fmt.Print(output)
 }
 
-func main() {
+func startup() string {
     args := os.Args[1:]
     if len(args) == 0 {
-        fmt.Printf("%s <program> - Runs the test program <program>", os.Args[0])
-        return
+        fmt.Printf("%s <romname> - Runs the ROM <romname>", os.Args[0])
+        os.Exit(0)
     }
 
     romName := args[len(args)-1]
 
     // Parse command line flags
-    verboseFlag := flag.Bool("v", true, "Show every instruction being executed (slow)")
+    verboseFlag := flag.Bool("v", false, "Show every instruction being executed (slow)")
     flag.Parse()
+    DEBUGMODE = *verboseFlag // Sadly - a global
+    
+    return romName
+}
 
-    DEBUGMODE = *verboseFlag
+func main() {
+    romName := startup()
+
     cpu := newCPU()
     cpu.mmu.cart = loadCart(romName)
+    display := newDisplay(cpu)
 
-    for {
-        cpu.step()
+    f := func(screen *ebiten.Image) error {
+        cycleCounter := 0 // May cause up to ~28 extra cycles to be run during this frame render
+        
+        for cycleCounter <= CYCLESPERFRAME {
+            cycles := cpu.step()
+            display.updateDisplay(cycles) // This may trip interrupts so it goes before the interrupt dispatching function
+            cpu.checkForInterrupts()
+            cycleCounter += cycles
+        }
+        screen.ReplacePixels(display.internalImage.Pix)
+        return nil
     }
+
+    // Setup the main loop
+    ebiten.SetRunnableInBackground(true)
+    runErr := ebiten.Run(f, SCREENWIDTH, SCREENHEIGHT, SCREENSCALE, "Go-GMB Emulator")
+    errStr := fmt.Sprintf("Exited run() with error: %s", runErr)
+    fmt.Println(errStr)
 }

@@ -1572,9 +1572,9 @@ func prettyDebugOutputAboutCurrentInstruction(cpu * CPU) {
     debugPrint(cpu, instructionInfo.name, instructionInfo.dataSize)
 }
 
-func (cpu *CPU) step() {
+func (cpu *CPU) step() int {
     prettyDebugOutputAboutCurrentInstruction(cpu)
-    
+    cyclesThisStep := 0
     if !cpu.halted{
         instruction := cpu.currentInstruction()
         instructionInfo := Instruction{}
@@ -1589,14 +1589,15 @@ func (cpu *CPU) step() {
 
         instructionInfo.function(cpu) // Execute the instruction
         cpu.instructionsExecuted++
-        cpu.timer.update(instructionInfo.cycles) // Update the timers (which may trigger interrupts)
+        cyclesThisStep = instructionInfo.cycles
+        cpu.timer.update(cyclesThisStep) // Update the timers (which may trigger interrupts)
     } else {
         // Special code to handle what to do if the CPU is halted
         // During a halt, the CPU is executing 4 cycles every update
         instructionInfo := cpu.mainInstructions[cpu.currentInstruction()]
-        cpu.timer.update(instructionInfo.cycles) 
+        cyclesThisStep = instructionInfo.cycles
+        cpu.timer.update(cyclesThisStep) 
     }
-    
-    
-    cpu.checkForInterrupts()
+
+    return cyclesThisStep
 }
