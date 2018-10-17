@@ -1,10 +1,10 @@
 package main
 
 // SCREENWIDTH - Horizontal resolution of the display (columns of pixels)
-var SCREENWIDTH = 160
+var SCREENWIDTH = 256
 
 // SCREENHEIGHT - Vertical Resolution of the display (rows of pixels)
-var SCREENHEIGHT = 144
+var SCREENHEIGHT = 256
 
 // SCREENSCALE - How much to upscale the display to fit the monitor better
 var SCREENSCALE = float64(2)
