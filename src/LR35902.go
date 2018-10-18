@@ -1515,9 +1515,9 @@ func (cpu * CPU) interrupt(interrupt uint8, address uint16){
     cpu.inte = false; // Disable the interrupt flag. Have to call RETI or EI to re-enable
     cpu.stackPointer -= 2
     cpu.mmu.write16(cpu.stackPointer, cpu.programCounter)
-    cpu.programCounter = 0x40
-    newIF := cpu.mmu.read8(0xFF0F) & ^interrupt // Reset the interrupt bitmask
-    cpu.mmu.write8(0xFF0F,newIF)
+    cpu.programCounter = address
+    newIF := cpu.mmu.getIF() & ^interrupt
+    cpu.mmu.setIF(newIF)
 }
 
 // checkForInterrupts

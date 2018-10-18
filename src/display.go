@@ -68,6 +68,7 @@ func (display *Display) updateDisplay(cycles int){
         display.renderLine(y)
     }
 
+    //fmt.Println(y)
     if y == 0 { // For testing purposes, render everything once per frame
         display.renderScreen()
     }

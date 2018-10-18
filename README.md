@@ -1,6 +1,7 @@
 # Game Boy Emulator
 
 ![Pewpew](docs/images/first_screen.png)
+
 Game Boy (LR35902) emulator implemented in golang. Based on my [8080](https://github.com/Insood/8080) emulator.
 
 Dependencies:

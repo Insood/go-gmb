@@ -20,7 +20,7 @@ func runROM(t *testing.T, directory string, romName string){
     cmdName := "src.exe"
     fullROMName := directory + "/" + romName
 
-    cmdArgs := []string{"-v=false",fullROMName}
+    cmdArgs := []string{"-v=false","-d=false",fullROMName}
     cmd := exec.Command(cmdName,cmdArgs...)
 
     // From https://medium.com/@vCabbage/go-timeout-commands-with-os-exec-commandcontext-ba0c861ed738
@@ -34,7 +34,7 @@ func runROM(t *testing.T, directory string, romName string){
     go func() { done <- cmd.Wait() }()
 
     // Start a timer
-    timeout := time.After(500 * time.Millisecond)
+    timeout := time.After(1500 * time.Millisecond)
 
     select {
     case <-timeout:

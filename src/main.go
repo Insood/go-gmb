@@ -10,6 +10,9 @@ import (
 // DEBUGMODE - Whether or not the program is running in debug mode (ie: pretty print opcodes)
 var DEBUGMODE = true
 
+// ENABLEDISPLAY - Whether or not to render a display
+var ENABLEDISPLAY = true
+
 func debugPrintHeader(cpu *CPU) {
     if cpu.instructionsExecuted%20 == 0 {
 
@@ -67,15 +70,31 @@ func startup() string {
 
     // Parse command line flags
     verboseFlag := flag.Bool("v", false, "Show every instruction being executed (slow)")
+    displayFlag := flag.Bool("d", true, "Shows a display")
     flag.Parse()
     DEBUGMODE = *verboseFlag // Sadly - a global
+    ENABLEDISPLAY =*displayFlag // Also another sad flag
     
     return romName
 }
 
-func main() {
-    romName := startup()
+func generateTitle() string {
+    return fmt.Sprintf("Go-GMB Emulator (%f) FPS",ebiten.CurrentFPS())
+}
 
+// debugMain - This is the loop that will run when the program starts with -d=false
+// Display/sound are not enabled and the emulator runs as fast as possible
+func debugMain(romName string){
+    cpu := newCPU()
+    cpu.mmu.cart = loadCart(romName)
+    for {
+        cpu.step()
+        cpu.checkForInterrupts()
+    }
+}
+
+// displayMain - This is the main emulator mode w/ a display & sound enabled
+func displayMain(romName string){
     cpu := newCPU()
     cpu.mmu.cart = loadCart(romName)
     display := newDisplay(cpu)
@@ -90,6 +109,8 @@ func main() {
             cycleCounter += cycles
         }
         screen.ReplacePixels(display.internalImage.Pix)
+
+        ebiten.SetWindowTitle(generateTitle())
         return nil
     }
 
@@ -98,4 +119,14 @@ func main() {
     runErr := ebiten.Run(f, SCREENWIDTH, SCREENHEIGHT, SCREENSCALE, "Go-GMB Emulator")
     errStr := fmt.Sprintf("Exited run() with error: %s", runErr)
     fmt.Println(errStr)
+}
+
+func main() {
+    romName := startup()
+
+    if ENABLEDISPLAY {
+        displayMain(romName)
+    } else {
+        debugMain(romName)
+    }
 }
