@@ -2,7 +2,6 @@ package main
 
 import (
     "fmt"
-    "os"
 )
 
 // Instruction - a struct which encapsulates a function pointer and also some information
@@ -908,10 +907,10 @@ func jrcc(cpu *CPU) {
     if cpu.CheckCondition() {
         // The jump address is relative to the end of the 2-byte opcode
         cpu.programCounter = cpu.programCounter + 2 + uint16(int8(cpu.immediate8()))
-        if int8( cpu.immediate8() )== -2 {
+        /*if int8( cpu.immediate8() )== -2 {
             fmt.Printf("Infinite JR detected")
             os.Exit(-1);
-        }	
+        }*/	
     } else {
         cpu.programCounter += 2
     }

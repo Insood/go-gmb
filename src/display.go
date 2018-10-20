@@ -12,8 +12,32 @@ type Display struct {
     internalImage *image.RGBA
 }
 
-func (display * Display) renderLine(y uint8){
+// (0,0)               (0,255)
+//      +----------------+
+//      |    (scrX,Scry) |
+//      |--+      +------|
+//      |  |      |      |
+//      |--+      +------|
+//      |                |
+//      +----------------+
+//
+func (display * Display) drawBackgroundLine(ly uint8){
+    tileY := ly + display.cpu.mmu.scrollY() // This will overflow as needed!
+   
+    for lcdX := uint8(0); lcdX < LCDWIDTH; lcdX++ {
+        tileX := lcdX + display.cpu.mmu.scrollX() // This will overflow as needed
+        color := display.cpu.mmu.backgroundPixelAt(tileX,tileY)
+        pixel := int(ly)*int(LCDWIDTH) + int(lcdX)
 
+        display.internalImage.Pix[4*pixel] = uint8((color >> 24) & 0xFF)
+        display.internalImage.Pix[4*pixel+1] = uint8((color >> 16) & 0xFF)
+        display.internalImage.Pix[4*pixel+2] = uint8((color >> 8) & 0xFF)
+        display.internalImage.Pix[4*pixel+3] = uint8(color & 0xFF)
+    }
+}
+
+func (display * Display) renderLine(ly uint8){
+    display.drawBackgroundLine(ly)
 }
 
 func (display * Display) readTile(tileNumber uint8) []uint8 {
@@ -63,15 +87,19 @@ func (display *Display) updateDisplay(cycles int){
         return
     }
 
-    y := display.cpu.mmu.getLY()
-    if y < 144 { // Can only render the first 144 rows - the rest are never rendered
-        display.renderLine(y)
+    if !display.cpu.mmu.showDisplay(){ // LCDC bit 7 is disabled
+        return
+    }
+
+    ly := display.cpu.mmu.getLY()
+    if ly < 144 { // Can only render the first 144 rows - the rest are never rendered
+        display.renderLine(ly)
     }
 
     //fmt.Println(y)
-    if y == 0 { // For testing purposes, render everything once per frame
-        display.renderScreen()
-    }
+    //if y == 0 { // For testing purposes, render everything once per frame
+    //   display.renderScreen()
+    //}
 
     // Scanline ended here!
     display.scanlineCounter -= 456 // Save the extra cycles
@@ -83,6 +111,6 @@ func newDisplay(cpu *CPU) *Display {
     display := new(Display)
     display.cpu = cpu
     display.scanlineCounter = 0
-    display.internalImage = image.NewRGBA(image.Rect(0, 0, SCREENHEIGHT, SCREENWIDTH))
+    display.internalImage = image.NewRGBA(image.Rect(0, 0, int(LCDWIDTH), int(LCDHEIGHT) ))
     return display
 }

@@ -116,7 +116,7 @@ func displayMain(romName string){
 
     // Setup the main loop
     ebiten.SetRunnableInBackground(true)
-    runErr := ebiten.Run(f, SCREENWIDTH, SCREENHEIGHT, SCREENSCALE, "Go-GMB Emulator")
+    runErr := ebiten.Run(f, int(LCDWIDTH), int(LCDHEIGHT), SCREENSCALE, "Go-GMB Emulator")
     errStr := fmt.Sprintf("Exited run() with error: %s", runErr)
     fmt.Println(errStr)
 }
