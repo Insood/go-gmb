@@ -9,24 +9,21 @@ import (
 type MMU struct {
     internalRAM []uint8
     cart *Cartridge
+    statMode uint8
 }
 
 // Returns an 8-bit value at the given address
 func (mmu *MMU) read8(address uint16) uint8 {
     if address == 0xFF00 { // P1 (joy pad info)
-        return 0 // Unimplemented
+        return 0x0F // Harcoded - no buttons pressed
     } else if address == 0xFF01  { // Serial transfer data
         panic("Reads from 0xFF01 unimplemented")
     } else if address == 0xFF02 { // SC control
         panic("Reads from 0xFF02 unimplemented")
     } else if address == 0xFF41 { 
-        panic("Reads from 0xFF41 unimplemented")
+        return mmu.calculateSTAT()
     } else if address == 0xFF47 {
         panic("Reads from 0xFF47 unimplemented")
-    } else if address == 0xFF48 {
-        panic("Reads from 0xFF48 unimplemented")
-    } else if address == 0xFF49 {
-        panic("Reads from 0xFF49 unimplemented")
     } else if (address >= 0xFF00) && (address <= 0xFFFF) {
         return (mmu.internalRAM)[address]
     }
@@ -50,16 +47,14 @@ func (mmu *MMU) write8(address uint16, data uint8) {
         // SB - do nothing; will not handle
     } else if address == 0xFF04 {
         mmu.internalRAM[0xFF04] = 0 // Increment the DIV (divider register) always resets it to 0
+    } else if address == 0xFF41 {
+        mmu.internalRAM[0xFF41] = data & 0x78 // Only bits 3-6 are writeable
     } else if address == 0xFF44 {
         mmu.internalRAM[0xFF44] = 0 // Incrementing LY (LCDC ycoordinate) always reset it to zero
     } else if address == 0xFF45 {
         panic("0xFF45 unimplemented")
     } else if address == 0xFF46 {
-        panic("0xFF46 unimplemented")
-    } else if address == 0xFF48 {
-        panic("0xFF48 unimplemented")
-    } else if address == 0xFF49 {
-        panic("0xFF49 unimplemented")
+        //panic("0xFF46 unimplemented")
     } else if (address >= 0xFF00) && (address <= 0xFFFF) {
         mmu.internalRAM[address] = data
     } else {
@@ -144,6 +139,21 @@ func (mmu *MMU) bgTileMapStartAddress() uint16 {
     return 0x9800
 }
 
+
+func (mmu *MMU) setSTATMode(mode uint8){
+    mmu.statMode = mode
+}
+
+// Combines the R/W flags from the internalRAM and also the special statMode
+// flags set by the display.update function
+func (mmu * MMU) calculateSTAT() uint8 {
+    stat := mmu.internalRAM[0xFF41] | mmu.statMode
+    if mmu.getLY() == mmu.getLYC(){
+        stat = stat | 0x4 // Set bit 2 (coincident flag)
+    }
+    return stat
+}
+
 func (mmu * MMU) scrollY() uint8 {
     return mmu.read8(0xFF42)
 }
@@ -164,6 +174,13 @@ func (mmu *MMU) windowX() uint8 {
 func (mmu * MMU) getLY() uint8 {
     return mmu.read8(0xFF44)
 }
+
+// getLYC - Returns the value of the LYC (line y compare) register. Setting
+// this value allows for an interrupt whenever LY=LYC
+func (mmu * MMU) getLYC() uint8 {
+    return mmu.read8(0xFF45)
+}
+
 
 // incrementLY - Handles incrementing the LCD Y-Register & setting interrupts
 func (mmu * MMU) incrementLY() {
@@ -191,7 +208,8 @@ func (mmu * MMU) incrementLY() {
 //          ...
 //          +14      [         last two bytes       ]
 //          +15      [        last eight pixels     ]
-func (mmu * MMU) backgroundPixelAt(x uint8, y uint8) int{
+// TODO: Calculate the color based on the selected palette
+func (mmu * MMU) backgroundPixelAt(x uint8, y uint8) int {
     // 32 tiles per row. y>>3 (same as y/8) gets the row. x>>3 (x/8) gets the columns
     tileMapOffset := (uint16(x)>>3) + (uint16(y)>>3)*32
     tileSelectionAddress := mmu.bgTileMapStartAddress() + uint16(tileMapOffset)

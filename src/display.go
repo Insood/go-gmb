@@ -76,6 +76,30 @@ func (display * Display) renderScreen(){
     }
 }
 
+//   0  80           252                  456 (CPU Clock)
+//   +---+-----------+---------------------+  0
+//   |   |           |                     |
+//   |OAM|   Pixel   |      H-Blank        |
+//   |   |  Transfer |                     |
+//   |   |           |                     |
+//   +---+-----------+---------------------+  144
+//   |            V-Blank Time             |
+//   +-------------------------------------+  154 (LCD Lines)
+//
+func (display * Display) calculateAndSetSTAT() {
+    if display.cpu.mmu.getLY() >= 144 {
+        display.cpu.mmu.setSTATMode(0x1) // In VBLANK
+    } else {
+        if display.scanlineCounter <= 80 {
+            display.cpu.mmu.setSTATMode(0x2) // OAM search
+        } else if display.scanlineCounter > 80 && display.scanlineCounter <= 252 {
+            display.cpu.mmu.setSTATMode(0x3) // Pixel transfer state
+        } else {
+            display.cpu.mmu.setSTATMode(0x0) // H-Blank
+        }
+    }
+}
+
 // updateDisplay - Updates the display by taking in the number of cycles that the last
 // instruction took to render.
 // A single scanline takes 456 cycles to 'render'.
@@ -83,6 +107,8 @@ func (display * Display) renderScreen(){
 // rendering is preserved
 func (display *Display) updateDisplay(cycles int){
     display.scanlineCounter += cycles
+    display.calculateAndSetSTAT()
+
     if display.scanlineCounter < 456 { // No new scanline just yet
         return
     }

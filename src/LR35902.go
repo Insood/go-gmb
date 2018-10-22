@@ -11,6 +11,7 @@ type Instruction struct {
     dataSize int
     function func(cpu *CPU)
     cycles   int
+    cyclesWhenBranchNotTaken int
 }
 
 // CPU - Represents the LR35902 CPU
@@ -22,7 +23,6 @@ type CPU struct {
     mainInstructions           [256]Instruction
     extendedInstructions       [256]Instruction
 
-    //cart *Cartridge
     mmu * MMU;
     timer * Timer;
 
@@ -33,6 +33,8 @@ type CPU struct {
     carry     bool
     halfCarry bool
     inte      bool // Whether or not interrupts are enabled
+
+    branchNotTaken bool
 
     // The following are not part of the microcontroller spec, but are here to help
     // with the emulation
@@ -58,350 +60,350 @@ func (cpu *CPU) pswByte() uint8 {
 }
 
 func (cpu *CPU) initializeMainInstructionSet() {
-    cpu.mainInstructions[0x8F] = Instruction{"ADC A,A", 1, adc, 4}
-    cpu.mainInstructions[0x88] = Instruction{"ADC A,B", 1, adc, 4}
-    cpu.mainInstructions[0x89] = Instruction{"ADC A,C", 1, adc, 4}
-    cpu.mainInstructions[0x8A] = Instruction{"ADC A,D", 1, adc, 4}
-    cpu.mainInstructions[0x8B] = Instruction{"ADC A,E", 1, adc, 4}
-    cpu.mainInstructions[0x8C] = Instruction{"ADC A,H", 1, adc, 4}
-    cpu.mainInstructions[0x8D] = Instruction{"ADC A,L", 1, adc, 4}
-    cpu.mainInstructions[0x8E] = Instruction{"ADC A,(HL)", 1, adc, 8}
-    cpu.mainInstructions[0xCE] = Instruction{"ADC A, d8", 2, adcn, 8}
-    cpu.mainInstructions[0x87] = Instruction{"ADD A, A", 1, add, 4}
-    cpu.mainInstructions[0x80] = Instruction{"ADD A, B", 1, add, 4}
-    cpu.mainInstructions[0x81] = Instruction{"ADD A, C", 1, add, 4}
-    cpu.mainInstructions[0x82] = Instruction{"ADD A, D", 1, add, 4}
-    cpu.mainInstructions[0x83] = Instruction{"ADD A, E", 1, add, 4}
-    cpu.mainInstructions[0x84] = Instruction{"ADD A, H", 1, add, 4}
-    cpu.mainInstructions[0x85] = Instruction{"ADD A, L", 1, add, 4}
-    cpu.mainInstructions[0x86] = Instruction{"ADD A, (HL)", 1, add, 8}
-    cpu.mainInstructions[0xC6] = Instruction{"ADD A, d8", 2, adi, 8}
-    cpu.mainInstructions[0x09] = Instruction{"ADD HL, BC", 1, addhl, 8}
-    cpu.mainInstructions[0x19] = Instruction{"ADD HL, DE", 1, addhl, 8}
-    cpu.mainInstructions[0x29] = Instruction{"ADD HL, HL", 1, addhl, 8}
-    cpu.mainInstructions[0x39] = Instruction{"ADD HL, SP", 1, addhl, 8}
-    cpu.mainInstructions[0xE8] = Instruction{"ADD SP, n", 2, addspn, 16}
-    cpu.mainInstructions[0xA7] = Instruction{"AND A, A", 1, and, 4}
-    cpu.mainInstructions[0xA0] = Instruction{"AND A, B", 1, and, 4}
-    cpu.mainInstructions[0xA1] = Instruction{"AND A, C", 1, and, 4}
-    cpu.mainInstructions[0xA2] = Instruction{"AND A, D", 1, and, 4}
-    cpu.mainInstructions[0xA3] = Instruction{"AND A, E", 1, and, 4}
-    cpu.mainInstructions[0xA4] = Instruction{"AND A, H", 1, and, 4}
-    cpu.mainInstructions[0xA5] = Instruction{"AND A, L", 1, and, 4}
-    cpu.mainInstructions[0xA6] = Instruction{"AND A, (HL)", 1, and, 8}
-    cpu.mainInstructions[0xE6] = Instruction{"AND d8", 2, ani, 8}
+    cpu.mainInstructions[0x8F] = Instruction{"ADC A,A", 1, adc, 4, 4}
+    cpu.mainInstructions[0x88] = Instruction{"ADC A,B", 1, adc, 4, 4}
+    cpu.mainInstructions[0x89] = Instruction{"ADC A,C", 1, adc, 4, 4}
+    cpu.mainInstructions[0x8A] = Instruction{"ADC A,D", 1, adc, 4, 4}
+    cpu.mainInstructions[0x8B] = Instruction{"ADC A,E", 1, adc, 4, 4}
+    cpu.mainInstructions[0x8C] = Instruction{"ADC A,H", 1, adc, 4, 4}
+    cpu.mainInstructions[0x8D] = Instruction{"ADC A,L", 1, adc, 4, 4}
+    cpu.mainInstructions[0x8E] = Instruction{"ADC A,(HL)", 1, adc, 8, 8}
+    cpu.mainInstructions[0xCE] = Instruction{"ADC A, d8", 2, adcn, 8, 8}
+    cpu.mainInstructions[0x87] = Instruction{"ADD A, A", 1, add, 4, 4}
+    cpu.mainInstructions[0x80] = Instruction{"ADD A, B", 1, add, 4, 4}
+    cpu.mainInstructions[0x81] = Instruction{"ADD A, C", 1, add, 4, 4}
+    cpu.mainInstructions[0x82] = Instruction{"ADD A, D", 1, add, 4, 4}
+    cpu.mainInstructions[0x83] = Instruction{"ADD A, E", 1, add, 4, 4}
+    cpu.mainInstructions[0x84] = Instruction{"ADD A, H", 1, add, 4, 4}
+    cpu.mainInstructions[0x85] = Instruction{"ADD A, L", 1, add, 4, 4}
+    cpu.mainInstructions[0x86] = Instruction{"ADD A, (HL)", 1, add, 8, 8}
+    cpu.mainInstructions[0xC6] = Instruction{"ADD A, d8", 2, adi, 8, 8}
+    cpu.mainInstructions[0x09] = Instruction{"ADD HL, BC", 1, addhl, 8, 8}
+    cpu.mainInstructions[0x19] = Instruction{"ADD HL, DE", 1, addhl, 8, 8}
+    cpu.mainInstructions[0x29] = Instruction{"ADD HL, HL", 1, addhl, 8, 8}
+    cpu.mainInstructions[0x39] = Instruction{"ADD HL, SP", 1, addhl, 8, 8}
+    cpu.mainInstructions[0xE8] = Instruction{"ADD SP, n", 2, addspn, 16, 16}
+    cpu.mainInstructions[0xA7] = Instruction{"AND A, A", 1, and, 4, 4}
+    cpu.mainInstructions[0xA0] = Instruction{"AND A, B", 1, and, 4, 4}
+    cpu.mainInstructions[0xA1] = Instruction{"AND A, C", 1, and, 4, 4}
+    cpu.mainInstructions[0xA2] = Instruction{"AND A, D", 1, and, 4, 4}
+    cpu.mainInstructions[0xA3] = Instruction{"AND A, E", 1, and, 4, 4}
+    cpu.mainInstructions[0xA4] = Instruction{"AND A, H", 1, and, 4, 4}
+    cpu.mainInstructions[0xA5] = Instruction{"AND A, L", 1, and, 4, 4}
+    cpu.mainInstructions[0xA6] = Instruction{"AND A, (HL)", 1, and, 8, 8}
+    cpu.mainInstructions[0xE6] = Instruction{"AND d8", 2, ani, 8, 8}
 
-    cpu.mainInstructions[0xCD] = Instruction{"CALL", 3, call, 24}
-    cpu.mainInstructions[0xC4] = Instruction{"CALL NZ", 3, callcc, 24}
-    cpu.mainInstructions[0xCC] = Instruction{"CALL Z", 3, callcc, 24}
-    cpu.mainInstructions[0xD4] = Instruction{"CALL NC", 3, callcc, 24}
-    cpu.mainInstructions[0xDC] = Instruction{"CALL C", 3, callcc, 24}
-    cpu.mainInstructions[0x3F] = Instruction{"CCF", 1, ccf, 4}
-    cpu.mainInstructions[0xBF] = Instruction{"CP A", 1, cpn, 4}
-    cpu.mainInstructions[0xB8] = Instruction{"CP B", 1, cpn, 4}
-    cpu.mainInstructions[0xB9] = Instruction{"CP C", 1, cpn, 4}
-    cpu.mainInstructions[0xBA] = Instruction{"CP D", 1, cpn, 4}
-    cpu.mainInstructions[0xBB] = Instruction{"CP E", 1, cpn, 4}
-    cpu.mainInstructions[0xBC] = Instruction{"CP H", 1, cpn, 4}
-    cpu.mainInstructions[0xBD] = Instruction{"CP L", 1, cpn, 4}
-    cpu.mainInstructions[0xBE] = Instruction{"CP (HL)", 1, cpn, 8}
-    cpu.mainInstructions[0xFE] = Instruction{"CP d8", 2, cpi, 8}
-    cpu.mainInstructions[0x2F] = Instruction{"CPL", 1, cpl, 4}
+    cpu.mainInstructions[0xCD] = Instruction{"CALL", 3, call, 24, 24}
+    cpu.mainInstructions[0xC4] = Instruction{"CALL NZ", 3, callcc, 24, 12}
+    cpu.mainInstructions[0xCC] = Instruction{"CALL Z", 3, callcc, 24, 12}
+    cpu.mainInstructions[0xD4] = Instruction{"CALL NC", 3, callcc, 24, 12}
+    cpu.mainInstructions[0xDC] = Instruction{"CALL C", 3, callcc, 24, 12}
+    cpu.mainInstructions[0x3F] = Instruction{"CCF", 1, ccf, 4, 4}
+    cpu.mainInstructions[0xBF] = Instruction{"CP A", 1, cpn, 4, 4}
+    cpu.mainInstructions[0xB8] = Instruction{"CP B", 1, cpn, 4, 4}
+    cpu.mainInstructions[0xB9] = Instruction{"CP C", 1, cpn, 4, 4}
+    cpu.mainInstructions[0xBA] = Instruction{"CP D", 1, cpn, 4, 4}
+    cpu.mainInstructions[0xBB] = Instruction{"CP E", 1, cpn, 4, 4}
+    cpu.mainInstructions[0xBC] = Instruction{"CP H", 1, cpn, 4, 4}
+    cpu.mainInstructions[0xBD] = Instruction{"CP L", 1, cpn, 4, 4}
+    cpu.mainInstructions[0xBE] = Instruction{"CP (HL)", 1, cpn, 8, 8}
+    cpu.mainInstructions[0xFE] = Instruction{"CP d8", 2, cpi, 8, 8}
+    cpu.mainInstructions[0x2F] = Instruction{"CPL", 1, cpl, 4, 4}
 
-    cpu.mainInstructions[0x27] = Instruction{"DAA", 1, daa, 4}
+    cpu.mainInstructions[0x27] = Instruction{"DAA", 1, daa, 4, 4}
 
-    cpu.mainInstructions[0x3D] = Instruction{"DEC A", 1, dec, 4}
-    cpu.mainInstructions[0x05] = Instruction{"DEC B", 1, dec, 4}
-    cpu.mainInstructions[0x0D] = Instruction{"DEC C", 1, dec, 4}
-    cpu.mainInstructions[0x15] = Instruction{"DEC D", 1, dec, 4}
-    cpu.mainInstructions[0x1D] = Instruction{"DEC E", 1, dec, 4}
-    cpu.mainInstructions[0x25] = Instruction{"DEC H", 1, dec, 4}
-    cpu.mainInstructions[0x2D] = Instruction{"DEC L", 1, dec, 4}
-    cpu.mainInstructions[0x35] = Instruction{"DEC (HL)", 1, dec, 12}
-    cpu.mainInstructions[0x0B] = Instruction{"DEC BC", 1, decrp, 8}
-    cpu.mainInstructions[0x1B] = Instruction{"DEC DE", 1, decrp, 8}
-    cpu.mainInstructions[0x2B] = Instruction{"DEC HL", 1, decrp, 8}
-    cpu.mainInstructions[0x3B] = Instruction{"DEC SP", 1, decrp, 8}
-    cpu.mainInstructions[0xF3] = Instruction{"DI", 1, di, 4}
-    cpu.mainInstructions[0xFB] = Instruction{"EI", 1, ei, 4}
-    cpu.mainInstructions[0x76] = Instruction{"HALT", 1, halt, 4}
+    cpu.mainInstructions[0x3D] = Instruction{"DEC A", 1, dec, 4, 4}
+    cpu.mainInstructions[0x05] = Instruction{"DEC B", 1, dec, 4, 4}
+    cpu.mainInstructions[0x0D] = Instruction{"DEC C", 1, dec, 4, 4}
+    cpu.mainInstructions[0x15] = Instruction{"DEC D", 1, dec, 4, 4}
+    cpu.mainInstructions[0x1D] = Instruction{"DEC E", 1, dec, 4, 4}
+    cpu.mainInstructions[0x25] = Instruction{"DEC H", 1, dec, 4, 4}
+    cpu.mainInstructions[0x2D] = Instruction{"DEC L", 1, dec, 4, 4}
+    cpu.mainInstructions[0x35] = Instruction{"DEC (HL)", 1, dec, 12, 12}
+    cpu.mainInstructions[0x0B] = Instruction{"DEC BC", 1, decrp, 8, 8}
+    cpu.mainInstructions[0x1B] = Instruction{"DEC DE", 1, decrp, 8, 8}
+    cpu.mainInstructions[0x2B] = Instruction{"DEC HL", 1, decrp, 8, 8}
+    cpu.mainInstructions[0x3B] = Instruction{"DEC SP", 1, decrp, 8, 8}
+    cpu.mainInstructions[0xF3] = Instruction{"DI", 1, di, 4, 4}
+    cpu.mainInstructions[0xFB] = Instruction{"EI", 1, ei, 4, 4}
+    cpu.mainInstructions[0x76] = Instruction{"HALT", 1, halt, 4, 4}
 
-    cpu.mainInstructions[0x3C] = Instruction{"INC A", 1, inc, 4}
-    cpu.mainInstructions[0x04] = Instruction{"INC B", 1, inc, 4}
-    cpu.mainInstructions[0x0C] = Instruction{"INC C", 1, inc, 4}
-    cpu.mainInstructions[0x14] = Instruction{"INC D", 1, inc, 4}
-    cpu.mainInstructions[0x1C] = Instruction{"INC E", 1, inc, 4}
-    cpu.mainInstructions[0x24] = Instruction{"INC H", 1, inc, 4}
-    cpu.mainInstructions[0x2C] = Instruction{"INC L", 1, inc, 4}
-    cpu.mainInstructions[0x34] = Instruction{"INC (HL)", 1, inc, 12}
+    cpu.mainInstructions[0x3C] = Instruction{"INC A", 1, inc, 4, 4}
+    cpu.mainInstructions[0x04] = Instruction{"INC B", 1, inc, 4, 4}
+    cpu.mainInstructions[0x0C] = Instruction{"INC C", 1, inc, 4, 4}
+    cpu.mainInstructions[0x14] = Instruction{"INC D", 1, inc, 4, 4}
+    cpu.mainInstructions[0x1C] = Instruction{"INC E", 1, inc, 4, 4}
+    cpu.mainInstructions[0x24] = Instruction{"INC H", 1, inc, 4, 4}
+    cpu.mainInstructions[0x2C] = Instruction{"INC L", 1, inc, 4, 4}
+    cpu.mainInstructions[0x34] = Instruction{"INC (HL)", 1, inc, 12, 12}
 
-    cpu.mainInstructions[0x03] = Instruction{"INC BC", 1, incrp, 8}
-    cpu.mainInstructions[0x13] = Instruction{"INC DE", 1, incrp, 8}
-    cpu.mainInstructions[0x23] = Instruction{"INC HL", 1, incrp, 8}
-    cpu.mainInstructions[0x33] = Instruction{"INC SP", 1, incrp, 8}
+    cpu.mainInstructions[0x03] = Instruction{"INC BC", 1, incrp, 8, 8}
+    cpu.mainInstructions[0x13] = Instruction{"INC DE", 1, incrp, 8, 8}
+    cpu.mainInstructions[0x23] = Instruction{"INC HL", 1, incrp, 8, 8}
+    cpu.mainInstructions[0x33] = Instruction{"INC SP", 1, incrp, 8, 8}
     
-    cpu.mainInstructions[0xC2] = Instruction{"JP NZ", 3, jpcc, 16}
-    cpu.mainInstructions[0xD2] = Instruction{"JP NC", 3, jpcc, 16}
-    cpu.mainInstructions[0xCA] = Instruction{"JP Z", 3, jpcc, 16}
-    cpu.mainInstructions[0xDA] = Instruction{"JP C", 3, jpcc, 16}
-    cpu.mainInstructions[0xE9] = Instruction{"JP (HL)", 1, jphl, 4}
-    cpu.mainInstructions[0xC3] = Instruction{"JP nn", 3, jpnn, 12}
-    cpu.mainInstructions[0x18] = Instruction{"JR", 2, jr, 8}
-    cpu.mainInstructions[0x20] = Instruction{"JR NZ,r8", 2, jrcc, 12}
-    cpu.mainInstructions[0x30] = Instruction{"JR NC,r8", 2, jrcc, 12}
-    cpu.mainInstructions[0x28] = Instruction{"JR Z,r8", 2, jrcc, 12}
-    cpu.mainInstructions[0x38] = Instruction{"JR C,r8", 2, jrcc, 12}
+    cpu.mainInstructions[0xC2] = Instruction{"JP NZ", 3, jpcc, 16, 12}
+    cpu.mainInstructions[0xD2] = Instruction{"JP NC", 3, jpcc, 16, 12}
+    cpu.mainInstructions[0xCA] = Instruction{"JP Z", 3, jpcc, 16, 12}
+    cpu.mainInstructions[0xDA] = Instruction{"JP C", 3, jpcc, 16, 12}
+    cpu.mainInstructions[0xE9] = Instruction{"JP (HL)", 1, jphl, 4, 4}
+    cpu.mainInstructions[0xC3] = Instruction{"JP nn", 3, jpnn, 16, 16}
+    cpu.mainInstructions[0x18] = Instruction{"JR", 2, jr, 12, 12}
+    cpu.mainInstructions[0x20] = Instruction{"JR NZ,r8", 2, jrcc, 12, 8}
+    cpu.mainInstructions[0x30] = Instruction{"JR NC,r8", 2, jrcc, 12, 8}
+    cpu.mainInstructions[0x28] = Instruction{"JR Z,r8", 2, jrcc, 12, 8}
+    cpu.mainInstructions[0x38] = Instruction{"JR C,r8", 2, jrcc, 12, 8}
 
-    cpu.mainInstructions[0x01] = Instruction{"LD BC, d16", 3, ld16, 12}
-    cpu.mainInstructions[0x11] = Instruction{"LD DE, d16", 3, ld16, 12}
-    cpu.mainInstructions[0x21] = Instruction{"LD HL, d16", 3, ld16, 12}
-    cpu.mainInstructions[0x31] = Instruction{"LD SP, d16", 3, ld16, 12}
-    cpu.mainInstructions[0x32] = Instruction{"LD (HL-), A", 1, lddHLA, 8}
-    cpu.mainInstructions[0x3A] = Instruction{"LD A, (HL-)", 1, lddAHL, 8}
-    cpu.mainInstructions[0x2A] = Instruction{"LD A, (HL+)", 1, ldiAHL, 8}
-    cpu.mainInstructions[0x22] = Instruction{"LD (HL+), A", 1, ldiHLA, 8}
-    cpu.mainInstructions[0x02] = Instruction{"LD (BC), A", 1, ldBCA, 8}
-    cpu.mainInstructions[0x12] = Instruction{"LD (DE), A", 1, ldDEA, 8}
-    cpu.mainInstructions[0x70] = Instruction{"LD (HL) B", 1, ldHLr, 8}
-    cpu.mainInstructions[0x71] = Instruction{"LD (HL) C", 1, ldHLr, 8}
-    cpu.mainInstructions[0x72] = Instruction{"LD (HL) D", 1, ldHLr, 8}
-    cpu.mainInstructions[0x73] = Instruction{"LD (HL) E", 1, ldHLr, 8}
-    cpu.mainInstructions[0x74] = Instruction{"LD (HL) H", 1, ldHLr, 8}
-    cpu.mainInstructions[0x75] = Instruction{"LD (HL) L", 1, ldHLr, 8}
+    cpu.mainInstructions[0x01] = Instruction{"LD BC, d16", 3, ld16, 12, 12}
+    cpu.mainInstructions[0x11] = Instruction{"LD DE, d16", 3, ld16, 12, 12}
+    cpu.mainInstructions[0x21] = Instruction{"LD HL, d16", 3, ld16, 12, 12}
+    cpu.mainInstructions[0x31] = Instruction{"LD SP, d16", 3, ld16, 12, 12}
+    cpu.mainInstructions[0x32] = Instruction{"LD (HL-), A", 1, lddHLA, 8, 8}
+    cpu.mainInstructions[0x3A] = Instruction{"LD A, (HL-)", 1, lddAHL, 8, 8}
+    cpu.mainInstructions[0x2A] = Instruction{"LD A, (HL+)", 1, ldiAHL, 8, 8}
+    cpu.mainInstructions[0x22] = Instruction{"LD (HL+), A", 1, ldiHLA, 8, 8}
+    cpu.mainInstructions[0x02] = Instruction{"LD (BC), A", 1, ldBCA, 8, 8}
+    cpu.mainInstructions[0x12] = Instruction{"LD (DE), A", 1, ldDEA, 8, 8}
+    cpu.mainInstructions[0x70] = Instruction{"LD (HL) B", 1, ldHLr, 8, 8}
+    cpu.mainInstructions[0x71] = Instruction{"LD (HL) C", 1, ldHLr, 8, 8}
+    cpu.mainInstructions[0x72] = Instruction{"LD (HL) D", 1, ldHLr, 8, 8}
+    cpu.mainInstructions[0x73] = Instruction{"LD (HL) E", 1, ldHLr, 8, 8}
+    cpu.mainInstructions[0x74] = Instruction{"LD (HL) H", 1, ldHLr, 8, 8}
+    cpu.mainInstructions[0x75] = Instruction{"LD (HL) L", 1, ldHLr, 8, 8}
     // 0x76 is HALT. There is no LD (HL) (HL)
-    cpu.mainInstructions[0x77] = Instruction{"LD (HL) A", 1, ldHLr, 8}
-    cpu.mainInstructions[0xF8] = Instruction{"LD HL, SP+n", 2, ldhlspn, 12}
+    cpu.mainInstructions[0x77] = Instruction{"LD (HL) A", 1, ldHLr, 8, 8}
+    cpu.mainInstructions[0xF8] = Instruction{"LD HL, SP+n", 2, ldhlspn, 12, 12}
 
-    cpu.mainInstructions[0x06] = Instruction{"LD B, d8", 2, ldrn, 8}
-    cpu.mainInstructions[0x0E] = Instruction{"LD C, d8", 2, ldrn, 8}
-    cpu.mainInstructions[0x16] = Instruction{"LD D, d8", 2, ldrn, 8}
-    cpu.mainInstructions[0x1E] = Instruction{"LD E, d8", 2, ldrn, 8}
-    cpu.mainInstructions[0x26] = Instruction{"LD H, d8", 2, ldrn, 8}
-    cpu.mainInstructions[0x2E] = Instruction{"LD L, d8", 2, ldrn, 8}
-    cpu.mainInstructions[0x36] = Instruction{"LD (HL), d8", 2, ldrn, 12}
-    cpu.mainInstructions[0x3E] = Instruction{"LD A, d8", 2, ldrn, 8}
+    cpu.mainInstructions[0x06] = Instruction{"LD B, d8", 2, ldrn, 8, 8}
+    cpu.mainInstructions[0x0E] = Instruction{"LD C, d8", 2, ldrn, 8, 8}
+    cpu.mainInstructions[0x16] = Instruction{"LD D, d8", 2, ldrn, 8, 8}
+    cpu.mainInstructions[0x1E] = Instruction{"LD E, d8", 2, ldrn, 8, 8}
+    cpu.mainInstructions[0x26] = Instruction{"LD H, d8", 2, ldrn, 8, 8}
+    cpu.mainInstructions[0x2E] = Instruction{"LD L, d8", 2, ldrn, 8, 8}
+    cpu.mainInstructions[0x36] = Instruction{"LD (HL), d8", 2, ldrn, 12, 12}
+    cpu.mainInstructions[0x3E] = Instruction{"LD A, d8", 2, ldrn, 8, 8}
 
-    cpu.mainInstructions[0x40] = Instruction{"LD B, B", 1, ldrr, 4}
-    cpu.mainInstructions[0x41] = Instruction{"LD B, C", 1, ldrr, 4}
-    cpu.mainInstructions[0x42] = Instruction{"LD B, D", 1, ldrr, 4}
-    cpu.mainInstructions[0x43] = Instruction{"LD B, E", 1, ldrr, 4}
-    cpu.mainInstructions[0x44] = Instruction{"LD B, H", 1, ldrr, 4}
-    cpu.mainInstructions[0x45] = Instruction{"LD B, L", 1, ldrr, 4}
-    cpu.mainInstructions[0x46] = Instruction{"LD B, (HL)", 1, ldrr, 8}
-    cpu.mainInstructions[0x47] = Instruction{"LD B, A", 1, ldrr, 4}
+    cpu.mainInstructions[0x40] = Instruction{"LD B, B", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x41] = Instruction{"LD B, C", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x42] = Instruction{"LD B, D", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x43] = Instruction{"LD B, E", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x44] = Instruction{"LD B, H", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x45] = Instruction{"LD B, L", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x46] = Instruction{"LD B, (HL)", 1, ldrr, 8, 8}
+    cpu.mainInstructions[0x47] = Instruction{"LD B, A", 1, ldrr, 4, 4}
 
-    cpu.mainInstructions[0x48] = Instruction{"LD C, B", 1, ldrr, 4}
-    cpu.mainInstructions[0x49] = Instruction{"LD C, C", 1, ldrr, 4}
-    cpu.mainInstructions[0x4A] = Instruction{"LD C, D", 1, ldrr, 4}
-    cpu.mainInstructions[0x4B] = Instruction{"LD C, E", 1, ldrr, 4}
-    cpu.mainInstructions[0x4C] = Instruction{"LD C, H", 1, ldrr, 4}
-    cpu.mainInstructions[0x4D] = Instruction{"LD C, L", 1, ldrr, 4}
-    cpu.mainInstructions[0x4E] = Instruction{"LD C, (HL)", 1, ldrr, 8}
-    cpu.mainInstructions[0x4F] = Instruction{"LD C, A", 1, ldrr, 4}
+    cpu.mainInstructions[0x48] = Instruction{"LD C, B", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x49] = Instruction{"LD C, C", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x4A] = Instruction{"LD C, D", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x4B] = Instruction{"LD C, E", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x4C] = Instruction{"LD C, H", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x4D] = Instruction{"LD C, L", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x4E] = Instruction{"LD C, (HL)", 1, ldrr, 8, 8}
+    cpu.mainInstructions[0x4F] = Instruction{"LD C, A", 1, ldrr, 4, 4}
 
-    cpu.mainInstructions[0x50] = Instruction{"LD D, B", 1, ldrr, 4}
-    cpu.mainInstructions[0x51] = Instruction{"LD D, C", 1, ldrr, 4}
-    cpu.mainInstructions[0x52] = Instruction{"LD D, D", 1, ldrr, 4}
-    cpu.mainInstructions[0x53] = Instruction{"LD D, E", 1, ldrr, 4}
-    cpu.mainInstructions[0x54] = Instruction{"LD D, H", 1, ldrr, 4}
-    cpu.mainInstructions[0x55] = Instruction{"LD D, L", 1, ldrr, 4}
-    cpu.mainInstructions[0x56] = Instruction{"LD D, (HL)", 1, ldrr, 8}
-    cpu.mainInstructions[0x57] = Instruction{"LD D, A", 1, ldrr, 4}
+    cpu.mainInstructions[0x50] = Instruction{"LD D, B", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x51] = Instruction{"LD D, C", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x52] = Instruction{"LD D, D", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x53] = Instruction{"LD D, E", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x54] = Instruction{"LD D, H", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x55] = Instruction{"LD D, L", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x56] = Instruction{"LD D, (HL)", 1, ldrr, 8, 8}
+    cpu.mainInstructions[0x57] = Instruction{"LD D, A", 1, ldrr, 4, 4}
 
-    cpu.mainInstructions[0x58] = Instruction{"LD E, B", 1, ldrr, 4}
-    cpu.mainInstructions[0x59] = Instruction{"LD E, C", 1, ldrr, 4}
-    cpu.mainInstructions[0x5A] = Instruction{"LD E, D", 1, ldrr, 4}
-    cpu.mainInstructions[0x5B] = Instruction{"LD E, E", 1, ldrr, 4}
-    cpu.mainInstructions[0x5C] = Instruction{"LD E, H", 1, ldrr, 4}
-    cpu.mainInstructions[0x5D] = Instruction{"LD E, L", 1, ldrr, 4}
-    cpu.mainInstructions[0x5E] = Instruction{"LD E, (HL)", 1, ldrr, 8}
-    cpu.mainInstructions[0x5F] = Instruction{"LD E, A", 1, ldrr, 4}
+    cpu.mainInstructions[0x58] = Instruction{"LD E, B", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x59] = Instruction{"LD E, C", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x5A] = Instruction{"LD E, D", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x5B] = Instruction{"LD E, E", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x5C] = Instruction{"LD E, H", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x5D] = Instruction{"LD E, L", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x5E] = Instruction{"LD E, (HL)", 1, ldrr, 8, 8}
+    cpu.mainInstructions[0x5F] = Instruction{"LD E, A", 1, ldrr, 4, 4}
 
-    cpu.mainInstructions[0x60] = Instruction{"LD H, B", 1, ldrr, 4}
-    cpu.mainInstructions[0x61] = Instruction{"LD H, C", 1, ldrr, 4}
-    cpu.mainInstructions[0x62] = Instruction{"LD H, D", 1, ldrr, 4}
-    cpu.mainInstructions[0x63] = Instruction{"LD H, E", 1, ldrr, 4}
-    cpu.mainInstructions[0x64] = Instruction{"LD H, H", 1, ldrr, 4}
-    cpu.mainInstructions[0x65] = Instruction{"LD H, L", 1, ldrr, 4}
-    cpu.mainInstructions[0x66] = Instruction{"LD H, (HL)", 1, ldrr, 8}
-    cpu.mainInstructions[0x67] = Instruction{"LD H, A", 1, ldrr, 4}
+    cpu.mainInstructions[0x60] = Instruction{"LD H, B", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x61] = Instruction{"LD H, C", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x62] = Instruction{"LD H, D", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x63] = Instruction{"LD H, E", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x64] = Instruction{"LD H, H", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x65] = Instruction{"LD H, L", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x66] = Instruction{"LD H, (HL)", 1, ldrr, 8, 8}
+    cpu.mainInstructions[0x67] = Instruction{"LD H, A", 1, ldrr, 4, 4}
 
-    cpu.mainInstructions[0x68] = Instruction{"LD L, B", 1, ldrr, 4}
-    cpu.mainInstructions[0x69] = Instruction{"LD L, C", 1, ldrr, 4}
-    cpu.mainInstructions[0x6A] = Instruction{"LD L, D", 1, ldrr, 4}
-    cpu.mainInstructions[0x6B] = Instruction{"LD L, E", 1, ldrr, 4}
-    cpu.mainInstructions[0x6C] = Instruction{"LD L, H", 1, ldrr, 4}
-    cpu.mainInstructions[0x6D] = Instruction{"LD L, L", 1, ldrr, 4}
-    cpu.mainInstructions[0x6E] = Instruction{"LD L, (HL)", 1, ldrr, 8}
-    cpu.mainInstructions[0x6F] = Instruction{"LD L, A", 1, ldrr, 4}
+    cpu.mainInstructions[0x68] = Instruction{"LD L, B", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x69] = Instruction{"LD L, C", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x6A] = Instruction{"LD L, D", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x6B] = Instruction{"LD L, E", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x6C] = Instruction{"LD L, H", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x6D] = Instruction{"LD L, L", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x6E] = Instruction{"LD L, (HL)", 1, ldrr, 8, 8}
+    cpu.mainInstructions[0x6F] = Instruction{"LD L, A", 1, ldrr, 4, 4}
 
-    cpu.mainInstructions[0x78] = Instruction{"LD A, B", 1, ldrr, 4}
-    cpu.mainInstructions[0x79] = Instruction{"LD A, C", 1, ldrr, 4}
-    cpu.mainInstructions[0x7A] = Instruction{"LD A, D", 1, ldrr, 4}
-    cpu.mainInstructions[0x7B] = Instruction{"LD A, E", 1, ldrr, 4}
-    cpu.mainInstructions[0x7C] = Instruction{"LD A, H", 1, ldrr, 4}
-    cpu.mainInstructions[0x7D] = Instruction{"LD A, L", 1, ldrr, 4}
-    cpu.mainInstructions[0x7E] = Instruction{"LD A, (HL)", 1, ldrr, 8}
-    cpu.mainInstructions[0x7F] = Instruction{"LD A, A", 1, ldrr, 4}
-    cpu.mainInstructions[0x0A] = Instruction{"LD A, (BC)", 1, ldabc, 8}
-    cpu.mainInstructions[0xFA] = Instruction{"LD A, (nn)", 3, ldann, 16}
-    cpu.mainInstructions[0x1A] = Instruction{"LD A, (DE)", 1, ldade, 8}
-    cpu.mainInstructions[0xF0] = Instruction{"LD A, ($FF00+n)", 2, ldhan, 12}
+    cpu.mainInstructions[0x78] = Instruction{"LD A, B", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x79] = Instruction{"LD A, C", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x7A] = Instruction{"LD A, D", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x7B] = Instruction{"LD A, E", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x7C] = Instruction{"LD A, H", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x7D] = Instruction{"LD A, L", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x7E] = Instruction{"LD A, (HL)", 1, ldrr, 8, 8}
+    cpu.mainInstructions[0x7F] = Instruction{"LD A, A", 1, ldrr, 4, 4}
+    cpu.mainInstructions[0x0A] = Instruction{"LD A, (BC)", 1, ldabc, 8, 8}
+    cpu.mainInstructions[0xFA] = Instruction{"LD A, (nn)", 3, ldann, 16, 16}
+    cpu.mainInstructions[0x1A] = Instruction{"LD A, (DE)", 1, ldade, 8, 8}
+    cpu.mainInstructions[0xF0] = Instruction{"LD A, ($FF00+n)", 2, ldhan, 12, 12}
 
-    cpu.mainInstructions[0xF2] = Instruction{"LD A, (C)", 1, ldAC, 8}
-    cpu.mainInstructions[0xE2] = Instruction{"LD (C), A", 1, ldCA, 8}
+    cpu.mainInstructions[0xF2] = Instruction{"LD A, (C)", 1, ldAC, 8, 8}
+    cpu.mainInstructions[0xE2] = Instruction{"LD (C), A", 1, ldCA, 8, 8}
 
-    cpu.mainInstructions[0xE0] = Instruction{"LDH (n),A", 2, ldhna, 12}
-    cpu.mainInstructions[0xEA] = Instruction{"LD (nn), A", 3, ldnna, 16}
-    cpu.mainInstructions[0x08] = Instruction{"LD (nn), SP", 3, ldnnsp, 20}
+    cpu.mainInstructions[0xE0] = Instruction{"LDH (n),A", 2, ldhna, 12, 12}
+    cpu.mainInstructions[0xEA] = Instruction{"LD (nn), A", 3, ldnna, 16, 16}
+    cpu.mainInstructions[0x08] = Instruction{"LD (nn), SP", 3, ldnnsp, 20, 20}
 
-    cpu.mainInstructions[0xF9] = Instruction{"LD SP, HL", 1, ldsphl, 8}
+    cpu.mainInstructions[0xF9] = Instruction{"LD SP, HL", 1, ldsphl, 8, 8}
 
-    cpu.mainInstructions[0x00] = Instruction{"NOP", 1, nop, 4}
+    cpu.mainInstructions[0x00] = Instruction{"NOP", 1, nop, 4, 4}
 
-    cpu.mainInstructions[0xB0] = Instruction{"OR B", 1, or, 4}
-    cpu.mainInstructions[0xB1] = Instruction{"OR C", 1, or, 4}
-    cpu.mainInstructions[0xB2] = Instruction{"OR D", 1, or, 4}
-    cpu.mainInstructions[0xB3] = Instruction{"OR E", 1, or, 4}
-    cpu.mainInstructions[0xB4] = Instruction{"OR H", 1, or, 4}
-    cpu.mainInstructions[0xB5] = Instruction{"OR L", 1, or, 4}
-    cpu.mainInstructions[0xB6] = Instruction{"OR (HL)", 1, or, 8}
-    cpu.mainInstructions[0xB7] = Instruction{"OR A", 1, or, 4}
-    cpu.mainInstructions[0xF6] = Instruction{"OR d8", 2, ori, 8}
+    cpu.mainInstructions[0xB0] = Instruction{"OR B", 1, or, 4, 4}
+    cpu.mainInstructions[0xB1] = Instruction{"OR C", 1, or, 4, 4}
+    cpu.mainInstructions[0xB2] = Instruction{"OR D", 1, or, 4, 4}
+    cpu.mainInstructions[0xB3] = Instruction{"OR E", 1, or, 4, 4}
+    cpu.mainInstructions[0xB4] = Instruction{"OR H", 1, or, 4, 4}
+    cpu.mainInstructions[0xB5] = Instruction{"OR L", 1, or, 4, 4}
+    cpu.mainInstructions[0xB6] = Instruction{"OR (HL)", 1, or, 8, 8}
+    cpu.mainInstructions[0xB7] = Instruction{"OR A", 1, or, 4, 4}
+    cpu.mainInstructions[0xF6] = Instruction{"OR d8", 2, ori, 8, 8}
 
-    cpu.mainInstructions[0xC1] = Instruction{"POP BC", 1, pop, 12}
-    cpu.mainInstructions[0xD1] = Instruction{"POP DE", 1, pop, 12}
-    cpu.mainInstructions[0xE1] = Instruction{"POP HL", 1, pop, 12}
-    cpu.mainInstructions[0xF1] = Instruction{"POP AF", 1, pop, 12}
+    cpu.mainInstructions[0xC1] = Instruction{"POP BC", 1, pop, 12, 12}
+    cpu.mainInstructions[0xD1] = Instruction{"POP DE", 1, pop, 12, 12}
+    cpu.mainInstructions[0xE1] = Instruction{"POP HL", 1, pop, 12, 12}
+    cpu.mainInstructions[0xF1] = Instruction{"POP AF", 1, pop, 12, 12}
 
-    cpu.mainInstructions[0xC5] = Instruction{"PUSH BC", 1, push, 16}
-    cpu.mainInstructions[0xD5] = Instruction{"PUSH DE", 1, push, 16}
-    cpu.mainInstructions[0xE5] = Instruction{"PUSH HL", 1, push, 16}
-    cpu.mainInstructions[0xF5] = Instruction{"PUSH AF", 1, push, 16}
-    cpu.mainInstructions[0xC9] = Instruction{"RET", 1, ret, 16}
-    cpu.mainInstructions[0xC0] = Instruction{"RET NZ", 1, retcc, 8}
-    cpu.mainInstructions[0xC8] = Instruction{"RET Z", 1, retcc, 8}
-    cpu.mainInstructions[0xD0] = Instruction{"RET NC", 1, retcc, 8}
-    cpu.mainInstructions[0xD8] = Instruction{"RET C", 1, retcc, 8}
-    cpu.mainInstructions[0xD9] = Instruction{"RETI", 1, reti, 8}
+    cpu.mainInstructions[0xC5] = Instruction{"PUSH BC", 1, push, 16, 16}
+    cpu.mainInstructions[0xD5] = Instruction{"PUSH DE", 1, push, 16, 16}
+    cpu.mainInstructions[0xE5] = Instruction{"PUSH HL", 1, push, 16, 16}
+    cpu.mainInstructions[0xF5] = Instruction{"PUSH AF", 1, push, 16, 16}
+    cpu.mainInstructions[0xC9] = Instruction{"RET", 1, ret, 16, 16}
+    cpu.mainInstructions[0xC0] = Instruction{"RET NZ", 1, retcc, 20, 8}
+    cpu.mainInstructions[0xC8] = Instruction{"RET Z", 1, retcc, 20, 8}
+    cpu.mainInstructions[0xD0] = Instruction{"RET NC", 1, retcc, 20, 8}
+    cpu.mainInstructions[0xD8] = Instruction{"RET C", 1, retcc, 20, 8}
+    cpu.mainInstructions[0xD9] = Instruction{"RETI", 1, reti, 16, 16}
     
-    cpu.mainInstructions[0x17] = Instruction{"RLA", 1, rla, 4}
-    cpu.mainInstructions[0x07] = Instruction{"RLCA", 1, rlca, 4}
-    cpu.mainInstructions[0x1F] = Instruction{"RRA", 1, rra, 4}
-    cpu.mainInstructions[0x0F] = Instruction{"RRCA", 1, rrca, 4}
+    cpu.mainInstructions[0x17] = Instruction{"RLA", 1, rla, 4, 4}
+    cpu.mainInstructions[0x07] = Instruction{"RLCA", 1, rlca, 4, 4}
+    cpu.mainInstructions[0x1F] = Instruction{"RRA", 1, rra, 4, 4}
+    cpu.mainInstructions[0x0F] = Instruction{"RRCA", 1, rrca, 4, 4}
 
-    cpu.mainInstructions[0xC7] = Instruction{"RST 00", 1, rst, 32}
-    cpu.mainInstructions[0xCF] = Instruction{"RST 08", 1, rst, 32}
-    cpu.mainInstructions[0xD7] = Instruction{"RST 10", 1, rst, 32}
-    cpu.mainInstructions[0xDF] = Instruction{"RST 18", 1, rst, 32}
-    cpu.mainInstructions[0xE7] = Instruction{"RST 20", 1, rst, 32}
-    cpu.mainInstructions[0xEF] = Instruction{"RST 28", 1, rst, 32}
-    cpu.mainInstructions[0xF7] = Instruction{"RST 30", 1, rst, 32}
-    cpu.mainInstructions[0xFF] = Instruction{"RST 38", 1, rst, 32}
-    cpu.mainInstructions[0x9F] = Instruction{"SBC A, A", 1, sbc, 4}
-    cpu.mainInstructions[0x98] = Instruction{"SBC A, B", 1, sbc, 4}
-    cpu.mainInstructions[0x99] = Instruction{"SBC A, C", 1, sbc, 4}
-    cpu.mainInstructions[0x9A] = Instruction{"SBC A, D", 1, sbc, 4}
-    cpu.mainInstructions[0x9B] = Instruction{"SBC A, E", 1, sbc, 4}
-    cpu.mainInstructions[0x9C] = Instruction{"SBC A, H", 1, sbc, 4}
-    cpu.mainInstructions[0x9D] = Instruction{"SBC A, L", 1, sbc, 4}
-    cpu.mainInstructions[0x9E] = Instruction{"SBC A, (HL)", 1, sbc, 8}
-    cpu.mainInstructions[0xDE] = Instruction{"SBC A, d8", 2, sbcd8, 8}
-    cpu.mainInstructions[0x37] = Instruction{"SCF", 1, scf, 4}
-    cpu.mainInstructions[0x97] = Instruction{"SUB A, A", 1, sub, 4}
-    cpu.mainInstructions[0x90] = Instruction{"SUB A, B", 1, sub, 4}
-    cpu.mainInstructions[0x91] = Instruction{"SUB A, C", 1, sub, 4}
-    cpu.mainInstructions[0x92] = Instruction{"SUB A, D", 1, sub, 4}
-    cpu.mainInstructions[0x93] = Instruction{"SUB A, E", 1, sub, 4}
-    cpu.mainInstructions[0x94] = Instruction{"SUB A, H", 1, sub, 4}
-    cpu.mainInstructions[0x95] = Instruction{"SUB A, L", 1, sub, 4}
-    cpu.mainInstructions[0x96] = Instruction{"SUB A, (HL)", 1, sub, 8}
-    cpu.mainInstructions[0xD6] = Instruction{"SUB d8", 2, sbi, 8}
+    cpu.mainInstructions[0xC7] = Instruction{"RST 00", 1, rst, 16, 16}
+    cpu.mainInstructions[0xCF] = Instruction{"RST 08", 1, rst, 16, 16}
+    cpu.mainInstructions[0xD7] = Instruction{"RST 10", 1, rst, 16, 16}
+    cpu.mainInstructions[0xDF] = Instruction{"RST 18", 1, rst, 16, 16}
+    cpu.mainInstructions[0xE7] = Instruction{"RST 20", 1, rst, 16, 16}
+    cpu.mainInstructions[0xEF] = Instruction{"RST 28", 1, rst, 16, 16}
+    cpu.mainInstructions[0xF7] = Instruction{"RST 30", 1, rst, 16, 16}
+    cpu.mainInstructions[0xFF] = Instruction{"RST 38", 1, rst, 16, 16}
+    cpu.mainInstructions[0x9F] = Instruction{"SBC A, A", 1, sbc, 4, 4}
+    cpu.mainInstructions[0x98] = Instruction{"SBC A, B", 1, sbc, 4, 4}
+    cpu.mainInstructions[0x99] = Instruction{"SBC A, C", 1, sbc, 4, 4}
+    cpu.mainInstructions[0x9A] = Instruction{"SBC A, D", 1, sbc, 4, 4}
+    cpu.mainInstructions[0x9B] = Instruction{"SBC A, E", 1, sbc, 4, 4}
+    cpu.mainInstructions[0x9C] = Instruction{"SBC A, H", 1, sbc, 4, 4}
+    cpu.mainInstructions[0x9D] = Instruction{"SBC A, L", 1, sbc, 4, 4}
+    cpu.mainInstructions[0x9E] = Instruction{"SBC A, (HL)", 1, sbc, 8, 8}
+    cpu.mainInstructions[0xDE] = Instruction{"SBC A, d8", 2, sbcd8, 8, 8}
+    cpu.mainInstructions[0x37] = Instruction{"SCF", 1, scf, 4, 4}
+    cpu.mainInstructions[0x97] = Instruction{"SUB A, A", 1, sub, 4, 4}
+    cpu.mainInstructions[0x90] = Instruction{"SUB A, B", 1, sub, 4, 4}
+    cpu.mainInstructions[0x91] = Instruction{"SUB A, C", 1, sub, 4, 4}
+    cpu.mainInstructions[0x92] = Instruction{"SUB A, D", 1, sub, 4, 4}
+    cpu.mainInstructions[0x93] = Instruction{"SUB A, E", 1, sub, 4, 4}
+    cpu.mainInstructions[0x94] = Instruction{"SUB A, H", 1, sub, 4, 4}
+    cpu.mainInstructions[0x95] = Instruction{"SUB A, L", 1, sub, 4, 4}
+    cpu.mainInstructions[0x96] = Instruction{"SUB A, (HL)", 1, sub, 8, 8}
+    cpu.mainInstructions[0xD6] = Instruction{"SUB d8", 2, sbi, 8, 8}
 
-    cpu.mainInstructions[0xA8] = Instruction{"XOR B", 1, xor, 4}
-    cpu.mainInstructions[0xA9] = Instruction{"XOR C", 1, xor, 4}
-    cpu.mainInstructions[0xAA] = Instruction{"XOR D", 1, xor, 4}
-    cpu.mainInstructions[0xAB] = Instruction{"XOR E", 1, xor, 4}
-    cpu.mainInstructions[0xAC] = Instruction{"XOR H", 1, xor, 4}
-    cpu.mainInstructions[0xAD] = Instruction{"XOR L", 1, xor, 4}
-    cpu.mainInstructions[0xAE] = Instruction{"XOR HL", 1, xor, 8}
-    cpu.mainInstructions[0xAF] = Instruction{"XOR A", 1, xor, 4}
-    cpu.mainInstructions[0xEE] = Instruction{"XOR d8", 2, xord8, 8}
+    cpu.mainInstructions[0xA8] = Instruction{"XOR B", 1, xor, 4, 4}
+    cpu.mainInstructions[0xA9] = Instruction{"XOR C", 1, xor, 4, 4}
+    cpu.mainInstructions[0xAA] = Instruction{"XOR D", 1, xor, 4, 4}
+    cpu.mainInstructions[0xAB] = Instruction{"XOR E", 1, xor, 4, 4}
+    cpu.mainInstructions[0xAC] = Instruction{"XOR H", 1, xor, 4, 4}
+    cpu.mainInstructions[0xAD] = Instruction{"XOR L", 1, xor, 4, 4}
+    cpu.mainInstructions[0xAE] = Instruction{"XOR HL", 1, xor, 8, 8}
+    cpu.mainInstructions[0xAF] = Instruction{"XOR A", 1, xor, 4, 4}
+    cpu.mainInstructions[0xEE] = Instruction{"XOR d8", 2, xord8, 8, 8}
 
 }
 
 func (cpu *CPU) initializeExtendedInstructionSet() {
-    cpu.extendedInstructions[0x07] = Instruction{"RLC A", 1, rlc, 8}
-    cpu.extendedInstructions[0x00] = Instruction{"RLC B", 1, rlc, 8}
-    cpu.extendedInstructions[0x01] = Instruction{"RLC C", 1, rlc, 8}
-    cpu.extendedInstructions[0x02] = Instruction{"RLC D", 1, rlc, 8}
-    cpu.extendedInstructions[0x03] = Instruction{"RLC E", 1, rlc, 8}
-    cpu.extendedInstructions[0x04] = Instruction{"RLC H", 1, rlc, 8}
-    cpu.extendedInstructions[0x05] = Instruction{"RLC L", 1, rlc, 8}
-    cpu.extendedInstructions[0x06] = Instruction{"RLC (HL)", 1, rlc, 16}
+    cpu.extendedInstructions[0x07] = Instruction{"RLC A", 1, rlc, 8, 8}
+    cpu.extendedInstructions[0x00] = Instruction{"RLC B", 1, rlc, 8, 8}
+    cpu.extendedInstructions[0x01] = Instruction{"RLC C", 1, rlc, 8, 8}
+    cpu.extendedInstructions[0x02] = Instruction{"RLC D", 1, rlc, 8, 8}
+    cpu.extendedInstructions[0x03] = Instruction{"RLC E", 1, rlc, 8, 8}
+    cpu.extendedInstructions[0x04] = Instruction{"RLC H", 1, rlc, 8, 8}
+    cpu.extendedInstructions[0x05] = Instruction{"RLC L", 1, rlc, 8, 8}
+    cpu.extendedInstructions[0x06] = Instruction{"RLC (HL)", 1, rlc, 16, 16}
 
-    cpu.extendedInstructions[0x0F] = Instruction{"RRC A", 1, rrc, 8}
-    cpu.extendedInstructions[0x08] = Instruction{"RRC B", 1, rrc, 8}
-    cpu.extendedInstructions[0x09] = Instruction{"RRC C", 1, rrc, 8}
-    cpu.extendedInstructions[0x0A] = Instruction{"RRC D", 1, rrc, 8}
-    cpu.extendedInstructions[0x0B] = Instruction{"RRC E", 1, rrc, 8}
-    cpu.extendedInstructions[0x0C] = Instruction{"RRC H", 1, rrc, 8}
-    cpu.extendedInstructions[0x0D] = Instruction{"RRC L", 1, rrc, 8}
-    cpu.extendedInstructions[0x0E] = Instruction{"RRC (HL)", 1, rrc, 16}
+    cpu.extendedInstructions[0x0F] = Instruction{"RRC A", 1, rrc, 8, 8}
+    cpu.extendedInstructions[0x08] = Instruction{"RRC B", 1, rrc, 8, 8}
+    cpu.extendedInstructions[0x09] = Instruction{"RRC C", 1, rrc, 8, 8}
+    cpu.extendedInstructions[0x0A] = Instruction{"RRC D", 1, rrc, 8, 8}
+    cpu.extendedInstructions[0x0B] = Instruction{"RRC E", 1, rrc, 8, 8}
+    cpu.extendedInstructions[0x0C] = Instruction{"RRC H", 1, rrc, 8, 8}
+    cpu.extendedInstructions[0x0D] = Instruction{"RRC L", 1, rrc, 8, 8}
+    cpu.extendedInstructions[0x0E] = Instruction{"RRC (HL)", 1, rrc, 16, 16}
 
-    cpu.extendedInstructions[0x17] = Instruction{"RL A", 1, rl, 8}
-    cpu.extendedInstructions[0x10] = Instruction{"RL B", 1, rl, 8}
-    cpu.extendedInstructions[0x11] = Instruction{"RL C", 1, rl, 8}
-    cpu.extendedInstructions[0x12] = Instruction{"RL D", 1, rl, 8}
-    cpu.extendedInstructions[0x13] = Instruction{"RL E", 1, rl, 8}
-    cpu.extendedInstructions[0x14] = Instruction{"RL H", 1, rl, 8}
-    cpu.extendedInstructions[0x15] = Instruction{"RL L", 1, rl, 8}
-    cpu.extendedInstructions[0x16] = Instruction{"RL (HL)", 1, rl, 16}
+    cpu.extendedInstructions[0x17] = Instruction{"RL A", 1, rl, 8, 8}
+    cpu.extendedInstructions[0x10] = Instruction{"RL B", 1, rl, 8, 8}
+    cpu.extendedInstructions[0x11] = Instruction{"RL C", 1, rl, 8, 8}
+    cpu.extendedInstructions[0x12] = Instruction{"RL D", 1, rl, 8, 8}
+    cpu.extendedInstructions[0x13] = Instruction{"RL E", 1, rl, 8, 8}
+    cpu.extendedInstructions[0x14] = Instruction{"RL H", 1, rl, 8, 8}
+    cpu.extendedInstructions[0x15] = Instruction{"RL L", 1, rl, 8, 8}
+    cpu.extendedInstructions[0x16] = Instruction{"RL (HL)", 1, rl, 16, 16}
 
-    cpu.extendedInstructions[0x1F] = Instruction{"RRN A", 1, rrn, 8}
-    cpu.extendedInstructions[0x18] = Instruction{"RRN B", 1, rrn, 8}
-    cpu.extendedInstructions[0x19] = Instruction{"RRN C", 1, rrn, 8}
-    cpu.extendedInstructions[0x1A] = Instruction{"RRN D", 1, rrn, 8}
-    cpu.extendedInstructions[0x1B] = Instruction{"RRN E", 1, rrn, 8}
-    cpu.extendedInstructions[0x1C] = Instruction{"RRN H", 1, rrn, 8}
-    cpu.extendedInstructions[0x1D] = Instruction{"RRN L", 1, rrn, 8}
-    cpu.extendedInstructions[0x1E] = Instruction{"RRN (HL)", 1, rrn, 16}
+    cpu.extendedInstructions[0x1F] = Instruction{"RRN A", 1, rrn, 8, 8}
+    cpu.extendedInstructions[0x18] = Instruction{"RRN B", 1, rrn, 8, 8}
+    cpu.extendedInstructions[0x19] = Instruction{"RRN C", 1, rrn, 8, 8}
+    cpu.extendedInstructions[0x1A] = Instruction{"RRN D", 1, rrn, 8, 8}
+    cpu.extendedInstructions[0x1B] = Instruction{"RRN E", 1, rrn, 8, 8}
+    cpu.extendedInstructions[0x1C] = Instruction{"RRN H", 1, rrn, 8, 8}
+    cpu.extendedInstructions[0x1D] = Instruction{"RRN L", 1, rrn, 8, 8}
+    cpu.extendedInstructions[0x1E] = Instruction{"RRN (HL)", 1, rrn, 16, 16}
 
-    cpu.extendedInstructions[0x27] = Instruction{"SLA A", 1, sla, 8}
-    cpu.extendedInstructions[0x20] = Instruction{"SLA B", 1, sla, 8}
-    cpu.extendedInstructions[0x21] = Instruction{"SLA C", 1, sla, 8}
-    cpu.extendedInstructions[0x22] = Instruction{"SLA D", 1, sla, 8}
-    cpu.extendedInstructions[0x23] = Instruction{"SLA E", 1, sla, 8}
-    cpu.extendedInstructions[0x24] = Instruction{"SLA H", 1, sla, 8}
-    cpu.extendedInstructions[0x25] = Instruction{"SLA L", 1, sla, 8}
-    cpu.extendedInstructions[0x26] = Instruction{"SLA (HL)", 1, sla, 16}
+    cpu.extendedInstructions[0x27] = Instruction{"SLA A", 1, sla, 8, 8}
+    cpu.extendedInstructions[0x20] = Instruction{"SLA B", 1, sla, 8, 8}
+    cpu.extendedInstructions[0x21] = Instruction{"SLA C", 1, sla, 8, 8}
+    cpu.extendedInstructions[0x22] = Instruction{"SLA D", 1, sla, 8, 8}
+    cpu.extendedInstructions[0x23] = Instruction{"SLA E", 1, sla, 8, 8}
+    cpu.extendedInstructions[0x24] = Instruction{"SLA H", 1, sla, 8, 8}
+    cpu.extendedInstructions[0x25] = Instruction{"SLA L", 1, sla, 8, 8}
+    cpu.extendedInstructions[0x26] = Instruction{"SLA (HL)", 1, sla, 16, 16}
 
-    cpu.extendedInstructions[0x2F] = Instruction{"SRA A", 1, sra, 8}
-    cpu.extendedInstructions[0x28] = Instruction{"SRA B", 1, sra, 8}
-    cpu.extendedInstructions[0x29] = Instruction{"SRA C", 1, sra, 8}
-    cpu.extendedInstructions[0x2A] = Instruction{"SRA D", 1, sra, 8}
-    cpu.extendedInstructions[0x2B] = Instruction{"SRA E", 1, sra, 8}
-    cpu.extendedInstructions[0x2C] = Instruction{"SRA H", 1, sra, 8}
-    cpu.extendedInstructions[0x2D] = Instruction{"SRA L", 1, sra, 8}
-    cpu.extendedInstructions[0x2E] = Instruction{"SRA (HL)", 1, sra, 16}
+    cpu.extendedInstructions[0x2F] = Instruction{"SRA A", 1, sra, 8, 8}
+    cpu.extendedInstructions[0x28] = Instruction{"SRA B", 1, sra, 8, 8}
+    cpu.extendedInstructions[0x29] = Instruction{"SRA C", 1, sra, 8, 8}
+    cpu.extendedInstructions[0x2A] = Instruction{"SRA D", 1, sra, 8, 8}
+    cpu.extendedInstructions[0x2B] = Instruction{"SRA E", 1, sra, 8, 8}
+    cpu.extendedInstructions[0x2C] = Instruction{"SRA H", 1, sra, 8, 8}
+    cpu.extendedInstructions[0x2D] = Instruction{"SRA L", 1, sra, 8, 8}
+    cpu.extendedInstructions[0x2E] = Instruction{"SRA (HL)", 1, sra, 16, 16}
 
-    cpu.extendedInstructions[0x3F] = Instruction{"SRL A", 1, srl, 8}
-    cpu.extendedInstructions[0x38] = Instruction{"SRL B", 1, srl, 8}
-    cpu.extendedInstructions[0x39] = Instruction{"SRL C", 1, srl, 8}
-    cpu.extendedInstructions[0x3A] = Instruction{"SRL D", 1, srl, 8}
-    cpu.extendedInstructions[0x3B] = Instruction{"SRL E", 1, srl, 8}
-    cpu.extendedInstructions[0x3C] = Instruction{"SRL H", 1, srl, 8}
-    cpu.extendedInstructions[0x3D] = Instruction{"SRL L", 1, srl, 8}
-    cpu.extendedInstructions[0x3E] = Instruction{"SRL (HL)", 1, srl, 16}
+    cpu.extendedInstructions[0x3F] = Instruction{"SRL A", 1, srl, 8, 8}
+    cpu.extendedInstructions[0x38] = Instruction{"SRL B", 1, srl, 8, 8}
+    cpu.extendedInstructions[0x39] = Instruction{"SRL C", 1, srl, 8, 8}
+    cpu.extendedInstructions[0x3A] = Instruction{"SRL D", 1, srl, 8, 8}
+    cpu.extendedInstructions[0x3B] = Instruction{"SRL E", 1, srl, 8, 8}
+    cpu.extendedInstructions[0x3C] = Instruction{"SRL H", 1, srl, 8, 8}
+    cpu.extendedInstructions[0x3D] = Instruction{"SRL L", 1, srl, 8, 8}
+    cpu.extendedInstructions[0x3E] = Instruction{"SRL (HL)", 1, srl, 16, 16}
 
-    cpu.extendedInstructions[0x37] = Instruction{"SWAP A", 1, swap, 8}
-    cpu.extendedInstructions[0x30] = Instruction{"SWAP B", 1, swap, 8}
-    cpu.extendedInstructions[0x31] = Instruction{"SWAP C", 1, swap, 8}
-    cpu.extendedInstructions[0x32] = Instruction{"SWAP D", 1, swap, 8}
-    cpu.extendedInstructions[0x33] = Instruction{"SWAP E", 1, swap, 8}
-    cpu.extendedInstructions[0x34] = Instruction{"SWAP H", 1, swap, 8}
-    cpu.extendedInstructions[0x35] = Instruction{"SWAP L", 1, swap, 8}
-    cpu.extendedInstructions[0x36] = Instruction{"SWAP (HL)", 1, swap, 16}
+    cpu.extendedInstructions[0x37] = Instruction{"SWAP A", 1, swap, 8, 8}
+    cpu.extendedInstructions[0x30] = Instruction{"SWAP B", 1, swap, 8, 8}
+    cpu.extendedInstructions[0x31] = Instruction{"SWAP C", 1, swap, 8, 8}
+    cpu.extendedInstructions[0x32] = Instruction{"SWAP D", 1, swap, 8, 8}
+    cpu.extendedInstructions[0x33] = Instruction{"SWAP E", 1, swap, 8, 8}
+    cpu.extendedInstructions[0x34] = Instruction{"SWAP H", 1, swap, 8, 8}
+    cpu.extendedInstructions[0x35] = Instruction{"SWAP L", 1, swap, 8, 8}
+    cpu.extendedInstructions[0x36] = Instruction{"SWAP (HL)", 1, swap, 16, 16}
 
     // Target register: lowest 3 bits
 
@@ -414,9 +416,9 @@ func (cpu *CPU) initializeExtendedInstructionSet() {
 
         instructionName := fmt.Sprintf("BIT %d %s", whichBit, registerName)
         if i&0x7 != 6 {
-            cpu.extendedInstructions[i] = Instruction{instructionName, 1, bit, 8}
+            cpu.extendedInstructions[i] = Instruction{instructionName, 1, bit, 8, 8}
         } else { // Instructions which access (HL) consume twice as many cycles
-            cpu.extendedInstructions[i] = Instruction{instructionName, 1, bit, 16}
+            cpu.extendedInstructions[i] = Instruction{instructionName, 1, bit, 16, 16}
         }
     }
 
@@ -426,9 +428,9 @@ func (cpu *CPU) initializeExtendedInstructionSet() {
         registerName := registerNames[i&0x7]
         instructionName := fmt.Sprintf("RES %d %s", whichBit, registerName)
         if i&0x7 != 6 {
-            cpu.extendedInstructions[i] = Instruction{instructionName, 1, res, 8}
+            cpu.extendedInstructions[i] = Instruction{instructionName, 1, res, 8, 8}
         } else { // Instructions which access (HL) consume twice as many cycles
-            cpu.extendedInstructions[i] = Instruction{instructionName, 1, res, 16}
+            cpu.extendedInstructions[i] = Instruction{instructionName, 1, res, 16, 16}
         }
     }
 
@@ -438,9 +440,9 @@ func (cpu *CPU) initializeExtendedInstructionSet() {
         registerName := registerNames[i&0x7]
         instructionName := fmt.Sprintf("SET %d %s", whichBit, registerName)
         if i&0x7 != 6 {
-            cpu.extendedInstructions[i] = Instruction{instructionName, 1, set, 8}
+            cpu.extendedInstructions[i] = Instruction{instructionName, 1, set, 8, 8}
         } else { // Instructions which access (HL) consume twice as many cycles
-            cpu.extendedInstructions[i] = Instruction{instructionName, 1, set, 16}
+            cpu.extendedInstructions[i] = Instruction{instructionName, 1, set, 16, 16}
         }
     }
 }
@@ -455,8 +457,8 @@ func newCPU() *CPU {
     cpu.timer = createTimer(cpu.mmu)
 
     for i := 0; i <= 255; i++ {
-        cpu.mainInstructions[i] = Instruction{"Unimplemented", 0, unimplemented, 0}
-        cpu.extendedInstructions[i] = Instruction{"Unimplemented", 0, unimplementedExtended, 0}
+        cpu.mainInstructions[i] = Instruction{"Unimplemented", 0, unimplemented, 0, 0}
+        cpu.extendedInstructions[i] = Instruction{"Unimplemented", 0, unimplementedExtended, 0, 0}
     }
 
     cpu.initializeMainInstructionSet()
@@ -722,6 +724,7 @@ func callcc(cpu *CPU) {
         call(cpu)
     } else {
         cpu.programCounter += 3
+        cpu.branchNotTaken = true
     }
 }
 
@@ -887,6 +890,7 @@ func jpcc(cpu * CPU){
         cpu.programCounter = cpu.immediate16()
     } else {
         cpu.programCounter += 3
+        cpu.branchNotTaken = true
     }
 }
 
@@ -907,12 +911,9 @@ func jrcc(cpu *CPU) {
     if cpu.CheckCondition() {
         // The jump address is relative to the end of the 2-byte opcode
         cpu.programCounter = cpu.programCounter + 2 + uint16(int8(cpu.immediate8()))
-        /*if int8( cpu.immediate8() )== -2 {
-            fmt.Printf("Infinite JR detected")
-            os.Exit(-1);
-        }*/	
     } else {
         cpu.programCounter += 2
+        cpu.branchNotTaken = true
     }
 }
 
@@ -1170,6 +1171,7 @@ func retcc(cpu *CPU) {
         ret(cpu)
     } else {
         cpu.programCounter++
+        cpu.branchNotTaken = true
     }
 }
 
@@ -1571,6 +1573,17 @@ func prettyDebugOutputAboutCurrentInstruction(cpu * CPU) {
     debugPrint(cpu, instructionInfo.name, instructionInfo.dataSize)
 }
 
+// cyclesThisStep - Some conditional instructions use a different number of cycles
+// depending on whether or not the condition was taken. The CPU sets the branchNotTaken
+// flag if the condition was not taken so that the lesser cycle count is used
+func (cpu * CPU) cyclesThisStep(currenttInstruction Instruction) int {
+    if cpu.branchNotTaken {
+        cpu.branchNotTaken = false
+        return currenttInstruction.cyclesWhenBranchNotTaken
+    }
+    return currenttInstruction.cycles
+}
+
 func (cpu *CPU) step() int {
     prettyDebugOutputAboutCurrentInstruction(cpu)
     cyclesThisStep := 0
@@ -1588,13 +1601,13 @@ func (cpu *CPU) step() int {
 
         instructionInfo.function(cpu) // Execute the instruction
         cpu.instructionsExecuted++
-        cyclesThisStep = instructionInfo.cycles
+        cyclesThisStep = cpu.cyclesThisStep(instructionInfo)
         cpu.timer.update(cyclesThisStep) // Update the timers (which may trigger interrupts)
     } else {
         // Special code to handle what to do if the CPU is halted
         // During a halt, the CPU is executing 4 cycles every update
         instructionInfo := cpu.mainInstructions[cpu.currentInstruction()]
-        cyclesThisStep = instructionInfo.cycles
+        cyclesThisStep = cpu.cyclesThisStep(instructionInfo)
         cpu.timer.update(cyclesThisStep) 
     }
 
